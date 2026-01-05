@@ -1,5 +1,4 @@
 #include "main.h"
-#include <Adafruit_MPU6050.h>
 
 // Adafruit_MPU6050 mpu;
 
@@ -11,6 +10,8 @@ void setup() {
   ota.begin();
 
   bleKeyboard.begin();
+
+  // bleMouse.begin();
 
   // pinMode(23, OUTPUT);
   // mpu.begin();
@@ -27,13 +28,14 @@ void loop() {
 
   if(Serial.available()) {
     enterKey = Serial.parseInt();
-    Serial.print("Read Key: ");
+    Serial.print("Enter Key: ");
     Serial.println(enterKey);
+    if(enterKey == 5) {
+      // Serial.println("Mouse Move Test");
+      // bleMouse.moveTest();
 
-    if(enterKey) {
+    } else if(enterKey) {
       bleKeyboard.sendKey(enterKey);
-      Serial.print("Sent Key: ");
-      Serial.println(enterKey);
     }
   }
 
