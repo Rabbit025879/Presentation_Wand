@@ -2,10 +2,12 @@
 
 WebServer server(80);
 
-static const char* WIFI_SSID = "Tu123";
-static const char* WIFI_PASS = "09090909";
-
 void OTA::begin() {
+  loadWiFiCredentials();
+  if(WIFI_SSID == "") {
+    Serial.println("No WiFi Credentials Found !");
+    return;
+  }
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.println("WIFI Connecting...");
