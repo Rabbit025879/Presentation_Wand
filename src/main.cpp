@@ -5,13 +5,10 @@
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  delay(5000);
-  Serial.println("Initializing...");
+
   ota.begin();
 
-  bleKeyboard.begin();
-
-  // bleMouse.begin();
+  blehid.begin();
 
   // pinMode(23, OUTPUT);
   // mpu.begin();
@@ -30,12 +27,16 @@ void loop() {
     enterKey = Serial.parseInt();
     Serial.print("Enter Key: ");
     Serial.println(enterKey);
+    if(blehid.isConnected() == false) {
+      Serial.println("BLE Not Connected");
+      return;
+    }
     if(enterKey == 5) {
-      // Serial.println("Mouse Move Test");
-      // bleMouse.moveTest();
-
+      Serial.println("Mouse Move Test");
+      blehid.getMouse()->move(200, 0);
     } else if(enterKey) {
-      bleKeyboard.sendKey(enterKey);
+      Serial.println("Keyboard Key Test");
+      blehid.getKeyboard()->write(enterKey);
     }
   }
 

@@ -2,11 +2,9 @@
 #define MAIN_H
 
 #include "OTA.h"
-#include "BLE_Keyboard.h"
-// #include "BLE_Mouse.h"
+#include "BLE_HID.h"
 
 OTA ota;
-BLE_Keyboard bleKeyboard;
-// BLE_Mouse bleMouse;
+BLEHID blehid("Tu's Wand", "Tu123", 100);
 
 #endif // MAIN_H
