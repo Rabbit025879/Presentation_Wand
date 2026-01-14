@@ -19,7 +19,7 @@ void Haptics::stopVibrate() {
   _isVibrating = false;
 }
 
-bool Haptics::isBuzy() {
+bool Haptics::isBusy() {
   return _isVibrating ? true : _isPulsing;
 }
 
@@ -46,11 +46,7 @@ void Haptics::emitPulses(PulsePattern* pattern, uint8_t cycles) {
     // Copy pattern to avoid changing during pulse
     _pattern = pattern;
     // _cycles = cycles;
-    Serial.print("Pulse started: ");
-    Serial.print(_startPulseTime);
-    Serial.println(" ms");
   } else {
-    Serial.println("Haptics is already pulsing. New pulse command ignored.");
     if(_currentCycle > cycles) {
       // Finished all cycles
       _isPulsing = false;
@@ -61,16 +57,9 @@ void Haptics::emitPulses(PulsePattern* pattern, uint8_t cycles) {
         _pattern[_patternIndicator].pause = 0; // No pause after last pulse
       }
     }
-    Serial.print("Current Cycle: ");
-    Serial.println(_currentCycle);
-    Serial.print("Pattern Indicator: ");
-    Serial.println(_patternIndicator);
     if(_pulse(_startPulseTime, _pattern[_patternIndicator].intensity, _pattern[_patternIndicator].duration, _pattern[_patternIndicator].pause)) {
       // Move to next pattern element
       _startPulseTime = millis();
-      Serial.print("Pulse started: ");
-      Serial.print(_startPulseTime);
-      Serial.println(" ms");
       if(_pattern[++_patternIndicator].duration == HAPTICS_PULSE_END) {
         _currentCycle++;
         _patternIndicator = 0; // Reset to start of pattern
@@ -91,10 +80,6 @@ void Haptics::emitPulses(uint8_t duration, uint8_t cycles, uint8_t pause) {
 bool Haptics::_pulse(uint32_t startPulseTime, uint8_t intensity, uint8_t duration, uint8_t pause) {
   uint32_t currentTime = millis();
   uint32_t elapsedTime = currentTime - startPulseTime;
-
-  Serial.print("Elapsed Time: ");
-  Serial.print(elapsedTime);
-  Serial.println(" ms");
 
   if(elapsedTime < (duration + pause)*UNIT_TIME_MS) {
     if(elapsedTime < duration*UNIT_TIME_MS) {

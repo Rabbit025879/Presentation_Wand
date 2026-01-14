@@ -24,7 +24,7 @@ public:
   Haptics(uint8_t pin);
   ~Haptics();
   
-  bool isBuzy();  // ! Please use this function to handle state before calling any vibrate functions
+  bool isBusy();
   
   void startVibrate(uint8_t intensity = HAPTICS_DEFAULT_INTENSITY);
   void stopVibrate();
