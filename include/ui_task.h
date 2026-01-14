@@ -7,7 +7,7 @@
 namespace HapticsTask {
   static void haptics_task(void *arg);
   void haptics_task_start(QueueHandle_t q, uint8_t pin);
-//   bool execute_haptics(ButtonEvent evt, Haptics& haptics);
+  bool execute_haptics(ButtonEvent evt, Haptics& haptics);
 } // namespace HapticsTask
 
 namespace ButtonTask {
