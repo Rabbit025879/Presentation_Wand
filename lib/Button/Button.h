@@ -17,13 +17,21 @@ enum class ButtonEvent {
   OtherPattern
 };
 
+struct ButtonState {
+  bool isPressed;
+  ButtonEvent event;
+
+  ButtonState() : isPressed(false), event(ButtonEvent::None) {}
+  ButtonState(bool pressed, ButtonEvent evt) : isPressed(pressed), event(evt) {}
+};
+
 class Button {
 public:
   Button(uint8_t pin, uint16_t debounceTime = BUTTON_DEBOUNCE_DEFAULT);
   ButtonEvent getEvent();
   ButtonEvent getEvent(uint8_t* pattern); // TODO: Implement pattern output
-  bool _isPressed();
-  bool _isReleased();
+  bool isPressed();
+  bool isReleased();
 
 private:
   uint8_t _pin;
