@@ -29,6 +29,7 @@ static void button_task(void *arg) {
       if(buttonState.event != lastButtonEvent) {
         xQueueSend(haptics_queue, &buttonState, portMAX_DELAY);
         xQueueSend(laser_queue, &buttonState, portMAX_DELAY);
+        xQueueSend(hid_queue, &buttonState, portMAX_DELAY);
       }
       lastButtonEvent = buttonState.event;
     }
