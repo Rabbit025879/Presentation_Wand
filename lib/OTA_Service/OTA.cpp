@@ -10,6 +10,10 @@ void OTA::begin() {
   }
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
+#ifdef SHOW_WIFI_DEBUG
+    Serial.println("WIFI Connecting to SSID: " + WIFI_SSID);
+    Serial.println("With PASS: " + WIFI_PASS);
+#endif
     Serial.println("WIFI Connecting...");
     delay(300);
   }

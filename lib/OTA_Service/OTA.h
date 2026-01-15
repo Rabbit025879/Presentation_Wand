@@ -1,8 +1,6 @@
 #ifndef OTA_H
 #define OTA_H
 
-#include <WiFi.h>
-#include <WebServer.h>
 #include <ElegantOTA.h>
 #include <Preferences.h>
 
