@@ -46,13 +46,13 @@ public:
   void set_version(uint16_t version);
 
   // Get Mouse functions
-  BLEMouse* getMouse() {
-    return &this->mouse;
+  BLEMouse& getMouse() {
+    return this->mouse;
   }
 
   // Get Keyboard functions
-  BLEKeyboard* getKeyboard() {
-    return &this->keyboard;
+  BLEKeyboard& getKeyboard() {
+    return this->keyboard;
   }
 
 protected:
