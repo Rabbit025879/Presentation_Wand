@@ -3,7 +3,7 @@
 namespace HapticsTask {
 static TaskHandle_t haptics_task_handle = NULL;
 static QueueHandle_t haptics_queue;
-static EventGroupHandle_t input_mode_event_group;
+static EventGroupHandle_t device_mode_event_group;
 
 bool execute_haptics(ButtonEvent evt, Haptics& haptics);
 
@@ -32,14 +32,14 @@ static void haptics_task(void *arg) {
 
 void haptics_task_start(QueueHandle_t q, EventGroupHandle_t eg, uint8_t pin) {
   haptics_queue = q;
-  input_mode_event_group = eg;
+  device_mode_event_group = eg;
 
   xTaskCreate(
     haptics_task,
     "haptics_task",
     3072,
     (void*)(uintptr_t)pin,
-    4,
+    3,
     &haptics_task_handle
   );
 }

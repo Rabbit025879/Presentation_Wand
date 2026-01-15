@@ -28,7 +28,7 @@ void hid_task_start(QueueHandle_t q, EventGroupHandle_t eg) {
     "hid_task",
     4096,
     NULL,
-    3,
+    5,
     &hid_task_handle
   );
 }
