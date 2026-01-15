@@ -16,13 +16,12 @@ void setup() {
   HapticsTask::haptics_task_start(haptics_queue, device_mode_event_group, HAPTICS_PIN); // Pin A0 for haptics
   LaserTask::laser_task_start(laser_queue, device_mode_event_group, LASER_PIN); // Pin A1 for laser
   HIDTask::hid_task_start(hid_queue, device_mode_event_group);
+  OTATask::ota_task_start(device_mode_event_group);
 
-  ota.begin();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  ota.loop(); // Handle OTA updates
 
   // if(Serial.available()) {
   //   String c = Serial.readString();

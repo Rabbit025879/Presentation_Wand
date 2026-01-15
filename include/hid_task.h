@@ -1,6 +1,7 @@
 #ifndef HID_TASK_H
 #define HID_TASK_H
 
+#include "utils.h"
 #include "BLE_HID.h"
 #include "Button.h"
 

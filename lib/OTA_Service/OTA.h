@@ -8,6 +8,7 @@ class OTA {
 public:
   void begin();
   void loop();
+  void end();
 
   void saveWiFi(const char* ssid, const char* pass) {
     prefs.begin("wifi", false);  // namespace = "wifi"
@@ -26,6 +27,9 @@ private:
     WIFI_PASS = prefs.getString("pass", "");
     prefs.end();
   }
+
+  void WiFiSTAMode();
+  void WiFiAPMode();
 };
 
 #endif // OTA_H

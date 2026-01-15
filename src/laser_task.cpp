@@ -3,7 +3,7 @@
 namespace LaserTask {
 static TaskHandle_t laser_task_handle = NULL;
 static QueueHandle_t laser_queue;
-static EventGroupHandle_t input_mode_event_group;
+static EventGroupHandle_t device_mode_event_group;
 
 bool execute_laser(ButtonEvent evt, Laser& laser);
 
@@ -32,14 +32,14 @@ static void laser_task(void *arg) {
 
 void laser_task_start(QueueHandle_t q, EventGroupHandle_t eg, uint8_t pin) {
   laser_queue = q;
-  input_mode_event_group = eg;
+  device_mode_event_group = eg;
 
   xTaskCreate(
     laser_task,
     "laser_task",
     3072,
     (void*)(uintptr_t)pin,
-    5,
+    4,
     &laser_task_handle
   );
 }

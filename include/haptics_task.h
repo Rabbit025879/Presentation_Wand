@@ -1,6 +1,7 @@
 #ifndef UI_TASK_CPP
 #define UI_TASK_CPP
 
+#include "utils.h"
 #include "Haptics.h"
 #include "Button.h"
 
