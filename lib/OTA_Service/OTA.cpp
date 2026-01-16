@@ -26,16 +26,29 @@ void OTA::loop() {
 }
 
 void OTA::end() {
-  server.stop();
-#ifdef USING_WIFI_STA
-  WiFi.disconnect(true, true);
-#endif  // USING_WIFI_STA
-#ifdef USING_WIFI_AP
-  WiFi.softAPdisconnect(true);
-#endif  // USING_WIFI_AP
+  Serial.println("Device is going to restart...");
+  delay(1000);
+  ESP.restart();
+
+  // TODO: Properly stop OTA service(can't turn off WiFi due to conflicts with BLE HID)
+//   server.stop();
+//   delay(100);  // Allow server to fully stop
+// #ifdef USING_WIFI_STA
+//   WiFi.disconnect();  // Disconnect without turning off radio first
+//   delay(100);
+//   WiFi.mode(WIFI_OFF);  // Then turn off WiFi
+// #endif  // USING_WIFI_STA
+// #ifdef USING_WIFI_AP
+//   WiFi.softAPdisconnect();  // Disconnect without turning off radio first
+//   delay(100);
+//   WiFi.mode(WIFI_OFF);  // Then turn off WiFi
+// #endif  // USING_WIFI_AP
+//   Serial.println("OTA Service Stopped !");
 }
 
 void OTA::WiFiSTAMode() {
+  WiFi.mode(WIFI_STA);  // Enable STA mode (also powers on radio)
+  delay(100);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.println("WIFI Connecting...");
@@ -51,6 +64,8 @@ void OTA::WiFiSTAMode() {
 }
 
 void OTA::WiFiAPMode() {
+  WiFi.mode(WIFI_AP);  // Enable AP mode (also powers on radio)
+  delay(100);
   WiFi.softAP("Tu's Wand", "Tuzi9227");        // TODO: Make configurable  
   Serial.println("WiFi AP Mode Started !!");
   Serial.print("AP IP Address: ");
