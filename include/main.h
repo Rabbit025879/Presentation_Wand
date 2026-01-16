@@ -9,6 +9,5 @@
 #include "ota_task.h"
 
 MPU mpu;
-SystemConfig currentSystemConfig = {FunctionMode::Presentation, InputMode::SimpleInput};
 
 #endif // MAIN_H

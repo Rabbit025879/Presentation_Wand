@@ -42,8 +42,20 @@ ButtonEvent Button::getEvent(uint8_t* pattern) {
           break;
       }
     } else {
-      if(_currentEvent == ButtonEvent::None)  _currentEvent = ButtonEvent::LongPress;
-      else                                    _currentEvent = ButtonEvent::OtherPattern;
+      switch (_currentEvent) {
+      case ButtonEvent::None:
+        _currentEvent = ButtonEvent::SingleLongPress;
+        break;
+      case ButtonEvent::SingleLongPress:
+        _currentEvent = ButtonEvent::DoubleLongPress;
+        break;
+      case ButtonEvent::DoubleLongPress:
+        _currentEvent = ButtonEvent::TripleLongPress;
+        break;
+      default:
+        _currentEvent = ButtonEvent::OtherPattern;
+        break;
+      }
     }
   }
   // If wait time exceeded since last event trigger, return the event
@@ -57,12 +69,12 @@ ButtonEvent Button::getEvent(uint8_t* pattern) {
 }
 
 bool Button::_completePressing(uint32_t& pressedTime) {
-  if(isReleased() && _pressStartTime != 0) {
+  if(_risingEdgeDetected() && _pressStartTime != 0) {
     pressedTime = millis() - _pressStartTime; // Pressing process complete time
     _pressStartTime = 0; // Reset press start time
     return true;
   }
-  if(isPressed()) {
+  if(_fallingEdgeDetected()) {
     _pressStartTime = millis();
   }
   if(_pressStartTime) pressedTime = _pressStartTime;  // Pressing process initiate time
@@ -71,7 +83,7 @@ bool Button::_completePressing(uint32_t& pressedTime) {
 }
 
 // Detect the falling edge(pull-up button) of the button press
-bool Button::isPressed() {
+bool Button::_fallingEdgeDetected() {
   // Debounce
   if(_isPressedState == false && digitalRead(_pin) == LOW) {
     if((millis() - _lastDebounceTime) > _debounceTime) {
@@ -84,7 +96,7 @@ bool Button::isPressed() {
 }
 
 // Detect the rising edge(pull-up button) of the button release
-bool Button::isReleased() {
+bool Button::_risingEdgeDetected() {
   // Debounce
   if(_isPressedState == true && digitalRead(_pin) == HIGH) {
     if((millis() - _lastDebounceTime) > _debounceTime) {

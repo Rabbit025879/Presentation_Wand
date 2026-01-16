@@ -32,7 +32,7 @@ namespace OTATask {
       "ota_task",
       4096,
       NULL,
-      5,
+      OTA_TASK_PRIORITY,
       &ota_task_handle
     );
   }

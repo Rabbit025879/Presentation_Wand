@@ -7,7 +7,7 @@
 
 namespace HIDTask {
   static void hid_task(void *arg);
-  void hid_task_start(QueueHandle_t q, EventGroupHandle_t eg);
+  void hid_task_start(QueueHandle_t q, EventGroupHandle_t eg, SystemMode* mode);
 } // namespace HIDTask
 
 #endif // HID_TASK_H
