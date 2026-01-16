@@ -1,12 +1,12 @@
-#ifndef UI_TASK_CPP
-#define UI_TASK_CPP
+#ifndef HAPTICS_TASK_H
+#define HAPTICS_TASK_H
 
 #include "utils.h"
 #include "Haptics.h"
 #include "Button.h"
 
 namespace HapticsTask {
-  void haptics_task_start(QueueHandle_t q, EventGroupHandle_t eg, uint8_t pin);
+  void haptics_task_start(QueueHandle_t q, EventGroupHandle_t eg, SystemMode* mode, uint8_t pin = HAPTICS_PIN);
 } // namespace HapticsTask
 
-#endif // UI_TASK_CPP
+#endif // HAPTICS_TASK_H
