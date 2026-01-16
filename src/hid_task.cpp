@@ -3,7 +3,8 @@
 namespace HIDTask {
 static TaskHandle_t hid_task_handle = NULL;
 static QueueHandle_t hid_queue;
-static EventGroupHandle_t input_mode_event_group;
+static EventGroupHandle_t device_mode_event_group;
+static SystemMode* current_system_mode;
 
 void hid_execute(ButtonEvent evt, BLEHID& blehid);
 
@@ -19,16 +20,17 @@ static void hid_task(void *arg) {
   }
 }
 
-void hid_task_start(QueueHandle_t q, EventGroupHandle_t eg) {
+void hid_task_start(QueueHandle_t q, EventGroupHandle_t eg, SystemMode* mode) {
   hid_queue = q;
-  input_mode_event_group = eg;
+  device_mode_event_group = eg;
+  current_system_mode = mode;
 
   xTaskCreate(
     hid_task,
     "hid_task",
     4096,
     NULL,
-    5,
+    HID_TASK_PRIORITY,
     &hid_task_handle
   );
 }
@@ -44,7 +46,7 @@ void hid_execute(ButtonEvent evt, BLEHID& blehid) {
     case ButtonEvent::TripleClick:
       blehid.getKeyboard().write(KEY_MEDIA_PREVIOUS_TRACK);
       break;
-    case ButtonEvent::LongPress:
+    case ButtonEvent::SingleLongPress:
       blehid.getKeyboard().write(KEY_MEDIA_MUTE);
       break;
     default:
