@@ -10,22 +10,22 @@ bool execute_haptics(ButtonEvent evt, Haptics& haptics);
 
 static void haptics_task(void *arg) {
   Haptics haptics((uint8_t)(uintptr_t)arg); // Pin A0 for vibrator motor
-  ButtonState buttonState;
+  InputEvent current_input_event;
   for(;;) {
     switch (current_system_mode->inputMode) {
       case InputMode::SimpleInput:
-        if(xQueueReceive(haptics_queue, &buttonState, portMAX_DELAY)) {
-          if(buttonState.isPressed == true) haptics.turnOn(200);
-          else                              haptics.turnOff();
+        if(xQueueReceive(haptics_queue, &current_input_event, portMAX_DELAY)) {
+          if(current_input_event.buttonState.isPressed == true) haptics.turnOn(200);
+          else                                                  haptics.turnOff();
         }
         break;
       case InputMode::Command:
         Serial.println("[Haptics Task]: Waiting for button event...");
-        if(xQueueReceive(haptics_queue, &buttonState, portMAX_DELAY)) {
+        if(xQueueReceive(haptics_queue, &current_input_event, portMAX_DELAY)) {
           Serial.print("[Haptics Task]: Received button event ");
-          Serial.println(static_cast<int>(buttonState.event));
+          Serial.println(static_cast<int>(current_input_event.buttonState.event));
           // If haptics is busy, wait until it finishes
-          while(execute_haptics(buttonState.event, haptics) && buttonState.event != ButtonEvent::Hold) {
+          while(execute_haptics(current_input_event.buttonState.event, haptics) && current_input_event.buttonState.event != ButtonEvent::Hold) {
             vTaskDelay(pdMS_TO_TICKS(10));
           }  
         }
@@ -40,7 +40,12 @@ static void haptics_task(void *arg) {
   }
 }
 
-void haptics_task_start(QueueHandle_t q, EventGroupHandle_t eg, SystemMode* mode, uint8_t pin) {
+void haptics_task_start(
+  QueueHandle_t q, 
+  EventGroupHandle_t eg, 
+  SystemMode* mode, 
+  uint8_t pin
+) {
   haptics_queue = q;
   device_mode_event_group = eg;
   current_system_mode = mode;

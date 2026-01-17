@@ -1,7 +1,7 @@
 #ifndef OUTPUTDEVICE_H
 #define OUTPUTDEVICE_H
 
-#include <Arduino.h>
+#include "Utils.h"
 
 #define DEFAULT_INTENSITY 125
 #define PULSE_END_MARK 0 // End marker for pattern
