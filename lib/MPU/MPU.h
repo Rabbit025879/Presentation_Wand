@@ -7,6 +7,11 @@
 class MPU : public MPU6050 {
 public:
   MPU(int gyro_config_num = 1, int acc_config_num = 0);
+  bool begin();  // Returns success/failure
+
+private:
+  int gyro_config;
+  int acc_config;
 };
 
 #endif // MPU_H
