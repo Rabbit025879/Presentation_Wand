@@ -9,6 +9,7 @@
 
 #include "Print.h"
 
+#include "Utils.h"
 #include "BLE_Mouse.h"
 #include "BLE_Keyboard.h"
 

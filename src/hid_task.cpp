@@ -10,17 +10,21 @@ void hid_execute(ButtonEvent evt, BLEHID& blehid);
 
 static void hid_task(void *arg) {
   BLEHID blehid("Tu's Wand", "Tu123", 100);
-  ButtonState buttonState;
+  InputEvent current_input_event;
   blehid.begin();
   for(;;) {
-    if(xQueueReceive(hid_queue, &buttonState, portMAX_DELAY)) {
-      hid_execute(buttonState.event, blehid);
+    if(xQueueReceive(hid_queue, &current_input_event, portMAX_DELAY)) {
+      hid_execute(current_input_event.buttonState.event, blehid);
     }
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 
-void hid_task_start(QueueHandle_t q, EventGroupHandle_t eg, SystemMode* mode) {
+void hid_task_start(
+  QueueHandle_t q, 
+  EventGroupHandle_t eg, 
+  SystemMode* mode
+) {
   hid_queue = q;
   device_mode_event_group = eg;
   current_system_mode = mode;

@@ -6,29 +6,28 @@ static QueueHandle_t haptics_queue;
 static QueueHandle_t laser_queue;
 static QueueHandle_t hid_queue;
 static EventGroupHandle_t device_mode_event_group;
+static InputEvent* current_input_event;
 static SystemMode* current_system_mode;
 
 void toggle_event_group_bit(EventBits_t bit);
 
 static void button_task(void *arg) {
   Button button((uint8_t)(uintptr_t)arg); // Pin 10 for button
-  ButtonState buttonState{false, ButtonEvent::None};
-  ButtonState lastButtonState{false, ButtonEvent::None};
+  InputEvent lastInputEvent{ButtonState{false, ButtonEvent::None}, MotionEvent::None};
 
   for(;;) {
-    buttonState.event = button.getEvent();
-    buttonState.isPressed = button.isPressed();
+    current_input_event->buttonState = button.getState();
     switch (current_system_mode->inputMode) {
       case InputMode::SimpleInput:
         // Haptics and Laser on press/release
-        if(buttonState.isPressed != lastButtonState.isPressed) {
+        if(current_input_event->buttonState.isPressed != lastInputEvent.buttonState.isPressed) {
           if(xEventGroupGetBits(device_mode_event_group) & USING_HAPTICS)
-            xQueueSend(haptics_queue, &buttonState, portMAX_DELAY); // Instant haptics feedback
+            xQueueSend(haptics_queue, current_input_event, portMAX_DELAY); // Instant haptics feedback
           if(xEventGroupGetBits(device_mode_event_group) & USING_LASER)
-            xQueueSend(laser_queue, &buttonState, portMAX_DELAY);   // Laser on
+            xQueueSend(laser_queue, current_input_event, portMAX_DELAY);   // Laser on
         }
-        
-        switch (buttonState.event) {
+
+        switch (current_input_event->buttonState.event) {
           case ButtonEvent::SingleClick:
             /* code */
             break;
@@ -57,17 +56,17 @@ static void button_task(void *arg) {
         }
 
         // HID on event
-        if(buttonState.event != lastButtonState.event && xEventGroupGetBits(device_mode_event_group) & USING_HID)
-          xQueueSend(hid_queue, &buttonState, portMAX_DELAY);
+        if(current_input_event->buttonState.event != lastInputEvent.buttonState.event && xEventGroupGetBits(device_mode_event_group) & USING_HID)
+          xQueueSend(hid_queue, current_input_event, portMAX_DELAY);
 
         break;
       case InputMode::Command:
         // Haptics feedback on event
-        if(buttonState.event != lastButtonState.event && xEventGroupGetBits(device_mode_event_group) & USING_HAPTICS)
-          xQueueSend(haptics_queue, &buttonState, portMAX_DELAY); // Command haptics feedback
+        if(current_input_event->buttonState.event != lastInputEvent.buttonState.event && xEventGroupGetBits(device_mode_event_group) & USING_HAPTICS)
+          xQueueSend(haptics_queue, current_input_event, portMAX_DELAY); // Command haptics feedback
 
         // System event group setup
-        switch (buttonState.event) {
+        switch (current_input_event->buttonState.event) {
           case ButtonEvent::SingleClick:
             toggle_event_group_bit(USING_HAPTICS);
             Serial.println("Toggled Haptics Mode");
@@ -104,21 +103,35 @@ static void button_task(void *arg) {
 
         break;
       case InputMode::MotionControl:
-        // To be implemented
+        // Hold to activate motion control
+        if(current_input_event->buttonState.event == ButtonEvent::Hold) {
+          xEventGroupSetBits(device_mode_event_group, USING_MPU);
+        } else if(current_input_event->buttonState.event == ButtonEvent::None && lastInputEvent.buttonState.event == ButtonEvent::Hold) {
+          xEventGroupClearBits(device_mode_event_group, USING_MPU);
+        }
         break;
       default:
         break;
     }
-    lastButtonState = buttonState;
+    lastInputEvent = *current_input_event;
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 
-void button_task_start(QueueHandle_t haptics_q, QueueHandle_t laser_q, QueueHandle_t hid_q, EventGroupHandle_t eg, SystemMode* mode, uint8_t pin) {
+void button_task_start(
+  QueueHandle_t haptics_q, 
+  QueueHandle_t laser_q, 
+  QueueHandle_t hid_q, 
+  EventGroupHandle_t eg, 
+  InputEvent* input_event, 
+  SystemMode* mode, 
+  uint8_t pin
+) {
   haptics_queue = haptics_q;
   laser_queue = laser_q;
   hid_queue = hid_q;
   device_mode_event_group = eg;
+  current_input_event = input_event;
   current_system_mode = mode;
 
   xTaskCreate(

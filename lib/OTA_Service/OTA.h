@@ -1,6 +1,7 @@
 #ifndef OTA_H
 #define OTA_H
 
+#include "Utils.h"
 #include <ElegantOTA.h>
 #include <Preferences.h>
 

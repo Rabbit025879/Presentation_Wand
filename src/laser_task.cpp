@@ -10,19 +10,24 @@ bool execute_laser(ButtonEvent evt, Laser& laser);
 
 static void laser_task(void *arg) {
   Laser laser((uint8_t)(uintptr_t)arg); // Pin A0 for laser device
-  ButtonState buttonState;
+  InputEvent current_input_event;
   for(;;) {
     if(current_system_mode->inputMode == InputMode::SimpleInput) {
-      if(xQueueReceive(laser_queue, &buttonState, portMAX_DELAY)) {
-        if(buttonState.isPressed == true) laser.turnOn(150);
-        else                              laser.turnOff();
+      if(xQueueReceive(laser_queue, &current_input_event, portMAX_DELAY)) {
+        if(current_input_event.buttonState.isPressed == true) laser.turnOn(150);
+        else                                                  laser.turnOff();
       }
     }
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 
-void laser_task_start(QueueHandle_t q, EventGroupHandle_t eg, SystemMode* mode, uint8_t pin) {
+void laser_task_start(
+  QueueHandle_t q, 
+  EventGroupHandle_t eg, 
+  SystemMode* mode, 
+  uint8_t pin
+) {
   laser_queue = q;
   device_mode_event_group = eg;
   current_system_mode = mode;
