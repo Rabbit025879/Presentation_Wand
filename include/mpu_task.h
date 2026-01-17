@@ -25,6 +25,8 @@ private:
   InputEvent* current_input_event;
   SystemMode* current_system_mode;
 
+  InputEvent _lastInputEvent{ButtonState(), MotionState()};
+
   void mpu_task_impl();
   
   static void mpu_task_static(void *arg);

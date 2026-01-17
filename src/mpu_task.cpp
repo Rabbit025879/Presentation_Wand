@@ -62,23 +62,22 @@ void MPUTask::mpu_task_impl() {
         // No action needed
         break;
       case InputMode::MotionControl:
-        if(xEventGroupGetBits(device_mode_event_group) & USING_MPU) {
-          if(debounceDelay-- == 0) {
-            debounceDelay = 20;
-            if(mpu.getAccX() < -0.5) {
-              current_input_event->buttonState.event = ButtonEvent::DoubleClick;
-            } else if(mpu.getAccX() > 0.5) {
-              current_input_event->buttonState.event = ButtonEvent::TripleClick;
-            } else if(fabs(mpu.getAccZ()) > 1.5) {
-              current_input_event->buttonState.event = ButtonEvent::SingleClick;
-            }
-          xQueueSend(hid_queue, current_input_event, portMAX_DELAY);
+        // if(xEventGroupGetBits(device_mode_event_group) & USING_MPU) {
+          current_input_event->motionState = mpu.getMotionState();
+          // Serial.print("Motion Event: ");
+          // Serial.print(static_cast<int>(current_input_event->motionState.motionEvent));
+          // Send motion event if any detected
+          if(current_input_event->motionState.attitudeState != _lastInputEvent.motionState.attitudeState) {
+            // Serial.print("Attitude State Sent- ");
+            // Serial.println(static_cast<int>(current_input_event->motionState.attitudeState));
           }
-        }
+          xQueueSend(hid_queue, current_input_event, portMAX_DELAY); // Send to HID task
+          _lastInputEvent = *current_input_event;
+        // }
         break;
       default:
         break;
     }
-    vTaskDelay(pdMS_TO_TICKS(5));
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
