@@ -41,8 +41,50 @@ void HIDTask::hid_task_impl() {
   InputEvent current_input_event;
   blehid.begin();
   for(;;) {
-    if(xQueueReceive(hid_queue, &current_input_event, portMAX_DELAY)) {
-      hid_execute(current_input_event.buttonState.event, blehid);
+    switch (current_system_mode->inputMode) {
+      case InputMode::SimpleInput:
+        if(xQueueReceive(hid_queue, &current_input_event, portMAX_DELAY)) {
+          hid_execute(current_input_event.buttonState.event, blehid);
+        }
+        break;
+      case InputMode::Command:
+        // No action needed
+        break;
+      case InputMode::MotionControl:
+        if(xQueueReceive(hid_queue, &current_input_event, portMAX_DELAY)) {
+          // Serial.print("Attitude State Received- ");
+          // Serial.println(static_cast<int>(current_input_event.motionState.attitudeState));
+          // Map motion events to HID actions
+          switch (current_input_event.motionState.attitudeState) {
+            case AttitudeState::TiltUp:
+              blehid.getMouse().move(0, -2); // Move mouse up
+              break;
+            case AttitudeState::TiltDown:
+              blehid.getMouse().move(0,  2); // Move mouse down
+              break;
+            case AttitudeState::TiltLeft:
+              // Can't detect reliably
+              break;
+            case AttitudeState::TiltRight:
+              // Can't detect reliably
+              break;
+            case AttitudeState::TiltClockwise:
+              blehid.getKeyboard().write(KEY_MEDIA_VOLUME_UP);
+              vTaskDelay(pdMS_TO_TICKS(200));
+              // blehid.getMouse().move(-2, 0); // Move mouse left
+              break;
+            case AttitudeState::TiltCounterClockwise:
+              blehid.getKeyboard().write(KEY_MEDIA_VOLUME_DOWN);
+              vTaskDelay(pdMS_TO_TICKS(200));
+              // blehid.getMouse().move(2, 0); // Move mouse right
+              break;
+            default:
+              break;
+          }
+        }
+        break;
+      default:
+        break;
     }
     vTaskDelay(pdMS_TO_TICKS(5));
   }

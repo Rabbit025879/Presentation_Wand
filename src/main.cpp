@@ -5,8 +5,9 @@ static EventGroupHandle_t device_mode_event_group = NULL;
 static QueueHandle_t haptics_queue = NULL;
 static QueueHandle_t laser_queue = NULL;
 static QueueHandle_t hid_queue = NULL;
-static InputEvent* input_event = new InputEvent(ButtonState(false, ButtonEvent::None), MotionEvent::None);
-static SystemMode* currentSystemMode = new SystemMode{FunctionMode::Presentation, InputMode::SimpleInput};
+static InputEvent* input_event = new InputEvent(ButtonState(), MotionState());
+static SystemMode* currentSystemMode = new SystemMode{FunctionMode::Presentation, InputMode::MotionControl};
+// Instantiate task objects
 static ButtonTask button_task;
 static HapticsTask haptics_task;
 static LaserTask laser_task;
