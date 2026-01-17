@@ -49,7 +49,7 @@ void ButtonTask::button_task_static(void *arg) {
 
 void ButtonTask::button_task_impl(uint8_t pin) {
   Button button(pin);
-  InputEvent lastInputEvent{ButtonState{false, ButtonEvent::None}, MotionEvent::None};
+  InputEvent lastInputEvent{ButtonState(), MotionState()};
 
   for(;;) {
     current_input_event->buttonState = button.getState();
