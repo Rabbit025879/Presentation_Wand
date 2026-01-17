@@ -4,68 +4,68 @@ Button::Button(uint8_t pin, uint16_t debounceTime) : _pin(pin), _debounceTime(de
   pinMode(_pin, INPUT_PULLUP);
 }
 
-ButtonEvent Button::getEvent() {
-  return getEvent(nullptr);
+ButtonState Button::getState() {
+  return getState(nullptr);
 }
 
-ButtonEvent Button::getEvent(uint8_t* pattern) {
+ButtonState Button::getState(uint8_t* pattern) {
   uint32_t pressedTime = 0;
   if(!_completePressing(pressedTime)) {
     // If still pressing and hold time exceeded, trigger Hold event and return
     if(millis() - pressedTime > BUTTON_PRESS_WAIT_TIME && pressedTime != 0) {
-      _currentEvent = ButtonEvent::Hold;
-      return _currentEvent;
+      _currentState = ButtonState(_isPressedState, ButtonEvent::Hold);
+      return _currentState;
     }
   } else {
     // If pressing complete, determine event type
     // If already in Hold state, reset to None
-    if(_currentEvent == ButtonEvent::Hold) {
+    if(_currentState.event == ButtonEvent::Hold) {
       _resetEvent();
-      return ButtonEvent::None;
+      return ButtonState(_isPressedState, ButtonEvent::None);
     }
     _eventTriggerTime = millis();
     // Determine single/multi click or long press, but do not return yet
     if(pressedTime <= BUTTON_SHORT_PRESS_THRESHOLD) {
       // Determine click pattern
-      switch(_currentEvent) {
+      switch(_currentState.event) {
         case ButtonEvent::None:
-          _currentEvent = ButtonEvent::SingleClick;
+          _currentState.event = ButtonEvent::SingleClick;
           break;
         case ButtonEvent::SingleClick:
-          _currentEvent = ButtonEvent::DoubleClick;
+          _currentState.event = ButtonEvent::DoubleClick;
           break;
         case ButtonEvent::DoubleClick:
-          _currentEvent = ButtonEvent::TripleClick;
+          _currentState.event = ButtonEvent::TripleClick;
           break;
         default:
-          _currentEvent = ButtonEvent::OtherPattern;
+          _currentState.event = ButtonEvent::OtherPattern;
           break;
       }
     } else {
-      switch (_currentEvent) {
+      switch (_currentState.event) {
       case ButtonEvent::None:
-        _currentEvent = ButtonEvent::SingleLongPress;
+        _currentState.event = ButtonEvent::SingleLongPress;
         break;
       case ButtonEvent::SingleLongPress:
-        _currentEvent = ButtonEvent::DoubleLongPress;
+        _currentState.event = ButtonEvent::DoubleLongPress;
         break;
       case ButtonEvent::DoubleLongPress:
-        _currentEvent = ButtonEvent::TripleLongPress;
+        _currentState.event = ButtonEvent::TripleLongPress;
         break;
       default:
-        _currentEvent = ButtonEvent::OtherPattern;
+        _currentState.event = ButtonEvent::OtherPattern;
         break;
       }
     }
   }
   // If wait time exceeded since last event trigger, return the event
   if(millis() - _eventTriggerTime > BUTTON_PRESS_WAIT_TIME && _eventTriggerTime != 0) {
-    ButtonEvent eventToReturn = _currentEvent;
+    ButtonState eventToReturn = ButtonState(_isPressedState, _currentState.event);
     _resetEvent();
     return eventToReturn;
   }
 
-  return ButtonEvent::None;
+  return ButtonState(_isPressedState, ButtonEvent::None);
 }
 
 bool Button::_completePressing(uint32_t& pressedTime) {
