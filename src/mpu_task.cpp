@@ -1,16 +1,56 @@
 #include "mpu_task.h"
 
-namespace MPUTask {
-static TaskHandle_t mpu_task_handle = NULL;
-static QueueHandle_t haptics_queue;
-static QueueHandle_t laser_queue;
-static QueueHandle_t hid_queue;
-static EventGroupHandle_t device_mode_event_group;
-static InputEvent* current_input_event;
-static SystemMode* current_system_mode;
+static MPUTask* mpu_task_instance = nullptr;
 
-static void mpu_task(void *arg) {
+MPUTask::MPUTask()
+  : mpu_task_handle(NULL),
+    haptics_queue(nullptr),
+    laser_queue(nullptr),
+    hid_queue(nullptr),
+    device_mode_event_group(nullptr),
+    current_input_event(nullptr),
+    current_system_mode(nullptr) {
+}
+
+void MPUTask::start(
+  QueueHandle_t haptics_q, 
+  QueueHandle_t laser_q, 
+  QueueHandle_t hid_q, 
+  EventGroupHandle_t eg, 
+  InputEvent* input_event,
+  SystemMode* mode
+) {
+  haptics_queue = haptics_q;
+  laser_queue = laser_q;
+  hid_queue = hid_q;
+  device_mode_event_group = eg;
+  current_input_event = input_event;
+  current_system_mode = mode;
+
+  mpu_task_instance = this;
+
+  xTaskCreate(
+    mpu_task_static,
+    "mpu_task",
+    4096,
+    NULL,
+    MPU_TASK_PRIORITY,
+    &mpu_task_handle
+  );
+}
+
+void MPUTask::mpu_task_static(void *arg) {
+  if (mpu_task_instance) {
+    mpu_task_instance->mpu_task_impl();
+  }
+}
+
+void MPUTask::mpu_task_impl() {
   MPU mpu;
+  while(!mpu.begin()) {
+    Serial.println("[MPU Task]: Failed to initialize");
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
   uint32_t debounceDelay = 20; // milliseconds
   for(;;) {
     mpu.update();
@@ -42,29 +82,3 @@ static void mpu_task(void *arg) {
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
-
-void mpu_task_start(
-  QueueHandle_t haptics_q, 
-  QueueHandle_t laser_q, 
-  QueueHandle_t hid_q, 
-  EventGroupHandle_t eg, 
-  InputEvent* input_event,
-  SystemMode* mode
-) {
-  haptics_queue = haptics_q;
-  laser_queue = laser_q;
-  hid_queue = hid_q;
-  device_mode_event_group = eg;
-  current_input_event = input_event;
-  current_system_mode = mode;
-
-  xTaskCreate(
-    mpu_task,
-    "mpu_task",
-    4096,
-    NULL,
-    MPU_TASK_PRIORITY,
-    &mpu_task_handle
-  );
-}
-} // namespace MPUTask

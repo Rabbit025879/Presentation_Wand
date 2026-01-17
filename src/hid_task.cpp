@@ -1,14 +1,42 @@
 #include "hid_task.h"
 
-namespace HIDTask {
-static TaskHandle_t hid_task_handle = NULL;
-static QueueHandle_t hid_queue;
-static EventGroupHandle_t device_mode_event_group;
-static SystemMode* current_system_mode;
+static HIDTask* hid_task_instance = nullptr;
 
-void hid_execute(ButtonEvent evt, BLEHID& blehid);
+HIDTask::HIDTask()
+  : hid_task_handle(NULL),
+    hid_queue(nullptr),
+    device_mode_event_group(nullptr),
+    current_system_mode(nullptr) {
+}
 
-static void hid_task(void *arg) {
+void HIDTask::start(
+  QueueHandle_t q, 
+  EventGroupHandle_t eg, 
+  SystemMode* mode
+) {
+  hid_queue = q;
+  device_mode_event_group = eg;
+  current_system_mode = mode;
+
+  hid_task_instance = this;
+
+  xTaskCreate(
+    hid_task_static,
+    "hid_task",
+    4096,
+    NULL,
+    HID_TASK_PRIORITY,
+    &hid_task_handle
+  );
+}
+
+void HIDTask::hid_task_static(void *arg) {
+  if (hid_task_instance) {
+    hid_task_instance->hid_task_impl();
+  }
+}
+
+void HIDTask::hid_task_impl() {
   BLEHID blehid("Tu's Wand", "Tu123", 100);
   InputEvent current_input_event;
   blehid.begin();
@@ -20,26 +48,7 @@ static void hid_task(void *arg) {
   }
 }
 
-void hid_task_start(
-  QueueHandle_t q, 
-  EventGroupHandle_t eg, 
-  SystemMode* mode
-) {
-  hid_queue = q;
-  device_mode_event_group = eg;
-  current_system_mode = mode;
-
-  xTaskCreate(
-    hid_task,
-    "hid_task",
-    4096,
-    NULL,
-    HID_TASK_PRIORITY,
-    &hid_task_handle
-  );
-}
-
-void hid_execute(ButtonEvent evt, BLEHID& blehid) {
+void HIDTask::hid_execute(ButtonEvent evt, BLEHID& blehid) {
   switch (evt) {
     case ButtonEvent::SingleClick:
       blehid.getKeyboard().write(KEY_MEDIA_PLAY_PAUSE);
@@ -57,4 +66,3 @@ void hid_execute(ButtonEvent evt, BLEHID& blehid) {
       break;
   }
 }
-} // namespace HIDTask
