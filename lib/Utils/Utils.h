@@ -25,6 +25,10 @@
 #define BUTTON_PRESS_WAIT_TIME 700 // milliseconds
 #define BUTTON_SHORT_PRESS_THRESHOLD 200 // milliseconds
 
+#define MOTION_DEBOUNCE_DEFAULT 500 // milliseconds
+#define TILT_THRESHOLD 15.0 // degrees
+#define FLICK_THRESHOLD 0.5 // g
+
 enum class ButtonEvent {
   None,
   SingleClick,
@@ -47,21 +51,43 @@ struct ButtonState {
 
 enum class MotionEvent {
   None,
-  Shake,
+  // OutOfPlane
+  FlickUp,
+  FlickDown,
+  RotateClockwise,
+  RotateCounterClockwise,
+  // InPlane
+  FlickLeft,
+  FlickRight
+};
+
+// TODO: Modified to superposition of states if needed(maybe using bitmask)
+enum class AttitudeState {
+  None,
+  // OutOfPlane
   TiltUp,
   TiltDown,
+  TiltClockwise,
+  TiltCounterClockwise,
+  // InPlane
   TiltLeft,
-  TiltRight,
-  RotateClockwise,
-  RotateCounterClockwise
+  TiltRight
+};
+
+struct MotionState {
+  MotionEvent motionEvent;
+  AttitudeState attitudeState;
+
+  MotionState() : motionEvent(MotionEvent::None), attitudeState(AttitudeState::None) {}
+  MotionState(MotionEvent mevt, AttitudeState astate) : motionEvent(mevt), attitudeState(astate) {}
 };
 
 struct InputEvent {
   ButtonState buttonState;
-  MotionEvent motionEvent;
+  MotionState motionState;
 
-  InputEvent() : buttonState(ButtonState()), motionEvent(MotionEvent::None) {}
-  InputEvent(ButtonState bstate, MotionEvent mevt) : buttonState(bstate), motionEvent(mevt) {}
+  InputEvent() : buttonState(ButtonState()), motionState(MotionState()) {}
+  InputEvent(ButtonState bstate, MotionState mstate) : buttonState(bstate), motionState(mstate) {}
 };
 
 enum class InputMode {
@@ -80,6 +106,9 @@ enum class FunctionMode {
 struct SystemMode {
   FunctionMode mode;
   InputMode inputMode;
+
+  SystemMode() : mode(FunctionMode::Presentation), inputMode(InputMode::SimpleInput) {}
+  SystemMode(FunctionMode m, InputMode im) : mode(m), inputMode(im) {}
 };
 
 #endif // UTILS_H

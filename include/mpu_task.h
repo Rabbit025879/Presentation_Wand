@@ -3,8 +3,11 @@
 
 #include "MPU.h"
 
-namespace MPUTask {
-  void mpu_task_start(
+class MPUTask {
+public:
+  MPUTask();
+  
+  void start(
     QueueHandle_t haptics_q, 
     QueueHandle_t laser_q, 
     QueueHandle_t hid_q, 
@@ -12,6 +15,21 @@ namespace MPUTask {
     InputEvent* input_event, 
     SystemMode* mode
   );
-} // namespace MPUTask
+
+private:
+  TaskHandle_t mpu_task_handle;
+  QueueHandle_t haptics_queue;
+  QueueHandle_t laser_queue;
+  QueueHandle_t hid_queue;
+  EventGroupHandle_t device_mode_event_group;
+  InputEvent* current_input_event;
+  SystemMode* current_system_mode;
+
+  InputEvent _lastInputEvent{ButtonState(), MotionState()};
+
+  void mpu_task_impl();
+  
+  static void mpu_task_static(void *arg);
+};
 
 #endif // MPU_TASK_H

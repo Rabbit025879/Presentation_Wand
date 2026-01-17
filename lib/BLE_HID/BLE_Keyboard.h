@@ -118,8 +118,8 @@ public:
   void releaseAll(void);
 
 private:
-  KeyReport         _keyReport;
-  MediaKeyReport    _mediaKeyReport;
+  KeyReport         _keyReport = {0, 0, {0, 0, 0, 0, 0, 0}};
+  MediaKeyReport    _mediaKeyReport = {0, 0};
 };
 
 #endif // BLE_KEYBOARD_H

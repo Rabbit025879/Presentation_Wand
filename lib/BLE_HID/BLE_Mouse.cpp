@@ -28,8 +28,8 @@ void BLEMouse::move(signed char x, signed char y, signed char wheel, signed char
     this->inputMouse->setValue(m, 5);
     this->inputMouse->notify();
 #if defined(USE_NIMBLE)        
-    // vTaskDelay(delayTicks);
-    this->delay_ms(_delay_ms);
+    vTaskDelay(pdMS_TO_TICKS(_delay_ms));
+    // this->delay_ms(_delay_ms);
 #endif // USE_NIMBLE
   }
 }

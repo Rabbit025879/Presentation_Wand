@@ -1,19 +1,55 @@
 #include "button_task.h"
 
-namespace ButtonTask {
-static TaskHandle_t button_task_handle = NULL;
-static QueueHandle_t haptics_queue;
-static QueueHandle_t laser_queue;
-static QueueHandle_t hid_queue;
-static EventGroupHandle_t device_mode_event_group;
-static InputEvent* current_input_event;
-static SystemMode* current_system_mode;
+// Static instance pointer for FreeRTOS callback
+static ButtonTask* button_task_instance = nullptr;
 
-void toggle_event_group_bit(EventBits_t bit);
+ButtonTask::ButtonTask()
+  : button_task_handle(NULL),
+    haptics_queue(nullptr),
+    laser_queue(nullptr),
+    hid_queue(nullptr),
+    device_mode_event_group(nullptr),
+    current_input_event(nullptr),
+    current_system_mode(nullptr) {
+}
 
-static void button_task(void *arg) {
-  Button button((uint8_t)(uintptr_t)arg); // Pin 10 for button
-  InputEvent lastInputEvent{ButtonState{false, ButtonEvent::None}, MotionEvent::None};
+void ButtonTask::start(
+  QueueHandle_t haptics_q, 
+  QueueHandle_t laser_q, 
+  QueueHandle_t hid_q, 
+  EventGroupHandle_t eg, 
+  InputEvent* input_event, 
+  SystemMode* mode, 
+  uint8_t pin
+) {
+  haptics_queue = haptics_q;
+  laser_queue = laser_q;
+  hid_queue = hid_q;
+  device_mode_event_group = eg;
+  current_input_event = input_event;
+  current_system_mode = mode;
+
+  button_task_instance = this;
+
+  xTaskCreate(
+    button_task_static,
+    "button_task",
+    3072,
+    (void*)(uintptr_t)pin,
+    BUTTON_TASK_PRIORITY,
+    &button_task_handle
+  );
+}
+
+void ButtonTask::button_task_static(void *arg) {
+  if (button_task_instance) {
+    button_task_instance->button_task_impl((uint8_t)(uintptr_t)arg);
+  }
+}
+
+void ButtonTask::button_task_impl(uint8_t pin) {
+  Button button(pin);
+  InputEvent lastInputEvent{ButtonState(), MotionState()};
 
   for(;;) {
     current_input_event->buttonState = button.getState();
@@ -118,37 +154,10 @@ static void button_task(void *arg) {
   }
 }
 
-void button_task_start(
-  QueueHandle_t haptics_q, 
-  QueueHandle_t laser_q, 
-  QueueHandle_t hid_q, 
-  EventGroupHandle_t eg, 
-  InputEvent* input_event, 
-  SystemMode* mode, 
-  uint8_t pin
-) {
-  haptics_queue = haptics_q;
-  laser_queue = laser_q;
-  hid_queue = hid_q;
-  device_mode_event_group = eg;
-  current_input_event = input_event;
-  current_system_mode = mode;
-
-  xTaskCreate(
-    button_task,
-    "button_task",
-    3072,
-    (void*)(uintptr_t)pin,
-    BUTTON_TASK_PRIORITY,
-    &button_task_handle
-  );
-}
-
-void toggle_event_group_bit(EventBits_t bit) {
+void ButtonTask::toggle_event_group_bit(EventBits_t bit) {
   if(xEventGroupGetBits(device_mode_event_group) & bit) {
     xEventGroupClearBits(device_mode_event_group, bit);
   } else {
     xEventGroupSetBits(device_mode_event_group, bit);
   }
 }
-} // namespace ButtonTask

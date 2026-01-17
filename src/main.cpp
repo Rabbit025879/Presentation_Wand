@@ -5,8 +5,15 @@ static EventGroupHandle_t device_mode_event_group = NULL;
 static QueueHandle_t haptics_queue = NULL;
 static QueueHandle_t laser_queue = NULL;
 static QueueHandle_t hid_queue = NULL;
-static InputEvent* input_event = new InputEvent(ButtonState(false, ButtonEvent::None), MotionEvent::None);
-static SystemMode* currentSystemMode = new SystemMode{FunctionMode::Presentation, InputMode::SimpleInput};
+static InputEvent* input_event = new InputEvent(ButtonState(), MotionState());
+static SystemMode* currentSystemMode = new SystemMode{FunctionMode::Presentation, InputMode::MotionControl};
+// Instantiate task objects
+static ButtonTask button_task;
+static HapticsTask haptics_task;
+static LaserTask laser_task;
+static HIDTask hid_task;
+static MPUTask mpu_task;
+static OTATask ota_task;
 
 void setup() {
   // put your setup code here, to run once:
@@ -20,7 +27,7 @@ void setup() {
   laser_queue = xQueueCreate(2, sizeof(InputEvent));
   hid_queue = xQueueCreate(2, sizeof(InputEvent));
 
-  ButtonTask::button_task_start(
+  button_task.start(
     haptics_queue, 
     laser_queue, 
     hid_queue, 
@@ -30,24 +37,24 @@ void setup() {
     BUTTON_PIN
   ); // Pin 10 for button
   
-  HapticsTask::haptics_task_start(
+  haptics_task.start(
     haptics_queue, 
     device_mode_event_group, 
     currentSystemMode, 
     HAPTICS_PIN
   ); // Pin A0 for haptics
-  LaserTask::laser_task_start(
+  laser_task.start(
     laser_queue, 
     device_mode_event_group, 
     currentSystemMode, 
     LASER_PIN
   ); // Pin A1 for laser
-  HIDTask::hid_task_start(
+  hid_task.start(
     hid_queue, 
     device_mode_event_group, 
     currentSystemMode
   );
-  MPUTask::mpu_task_start(
+  mpu_task.start(
     haptics_queue, 
     laser_queue, 
     hid_queue, 
@@ -55,7 +62,7 @@ void setup() {
     input_event, 
     currentSystemMode
   );
-  OTATask::ota_task_start(
+  ota_task.start(
     device_mode_event_group
   );
 

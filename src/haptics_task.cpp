@@ -1,15 +1,44 @@
 #include "haptics_task.h"
 
-namespace HapticsTask {
-static TaskHandle_t haptics_task_handle = NULL;
-static QueueHandle_t haptics_queue;
-static EventGroupHandle_t device_mode_event_group;
-static SystemMode* current_system_mode;
+static HapticsTask* haptics_task_instance = nullptr;
 
-bool execute_haptics(ButtonEvent evt, Haptics& haptics);
+HapticsTask::HapticsTask()
+  : haptics_task_handle(NULL),
+    haptics_queue(nullptr),
+    device_mode_event_group(nullptr),
+    current_system_mode(nullptr) {
+}
 
-static void haptics_task(void *arg) {
-  Haptics haptics((uint8_t)(uintptr_t)arg); // Pin A0 for vibrator motor
+void HapticsTask::start(
+  QueueHandle_t q, 
+  EventGroupHandle_t eg, 
+  SystemMode* mode, 
+  uint8_t pin
+) {
+  haptics_queue = q;
+  device_mode_event_group = eg;
+  current_system_mode = mode;
+
+  haptics_task_instance = this;
+
+  xTaskCreate(
+    haptics_task_static,
+    "haptics_task",
+    3072,
+    (void*)(uintptr_t)pin,
+    HAPTICS_TASK_PRIORITY,
+    &haptics_task_handle
+  );
+}
+
+void HapticsTask::haptics_task_static(void *arg) {
+  if (haptics_task_instance) {
+    haptics_task_instance->haptics_task_impl((uint8_t)(uintptr_t)arg);
+  }
+}
+
+void HapticsTask::haptics_task_impl(uint8_t pin) {
+  Haptics haptics(pin);
   InputEvent current_input_event;
   for(;;) {
     switch (current_system_mode->inputMode) {
@@ -40,27 +69,7 @@ static void haptics_task(void *arg) {
   }
 }
 
-void haptics_task_start(
-  QueueHandle_t q, 
-  EventGroupHandle_t eg, 
-  SystemMode* mode, 
-  uint8_t pin
-) {
-  haptics_queue = q;
-  device_mode_event_group = eg;
-  current_system_mode = mode;
-
-  xTaskCreate(
-    haptics_task,
-    "haptics_task",
-    3072,
-    (void*)(uintptr_t)pin,
-    HAPTICS_TASK_PRIORITY,
-    &haptics_task_handle
-  );
-}
-
-bool execute_haptics(ButtonEvent evt, Haptics& haptics) {
+bool HapticsTask::execute_haptics(ButtonEvent evt, Haptics& haptics) {
   switch (evt) {
     case ButtonEvent::SingleClick:
       haptics.shortPulse(1, 200);
@@ -86,4 +95,3 @@ bool execute_haptics(ButtonEvent evt, Haptics& haptics) {
   }
   return haptics.isBusy();
 }
-} // namespace HapticsTask

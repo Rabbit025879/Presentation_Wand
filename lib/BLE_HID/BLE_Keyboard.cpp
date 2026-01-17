@@ -7,8 +7,8 @@ void BLEKeyboard::sendReport(KeyReport* keys)
     this->inputKeyboard->setValue((uint8_t*)keys, sizeof(KeyReport));
     this->inputKeyboard->notify();
 #if defined(USE_NIMBLE)        
-    // vTaskDelay(delayTicks);
-    this->delay_ms(_delay_ms);
+    vTaskDelay(pdMS_TO_TICKS(_delay_ms));
+    // this->delay_ms(_delay_ms);
 #endif // USE_NIMBLE
   }	
 }
@@ -19,8 +19,8 @@ void BLEKeyboard::sendReport(MediaKeyReport* keys)
     this->inputMediaKeys->setValue((uint8_t*)keys, sizeof(MediaKeyReport));
     this->inputMediaKeys->notify();
 #if defined(USE_NIMBLE)        
-    //vTaskDelay(delayTicks);
-    this->delay_ms(_delay_ms);
+    vTaskDelay(pdMS_TO_TICKS(_delay_ms));
+    // this->delay_ms(_delay_ms);
 #endif // USE_NIMBLE
   }	
 }

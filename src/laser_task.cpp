@@ -1,15 +1,44 @@
 #include "laser_task.h"
 
-namespace LaserTask {
-static TaskHandle_t laser_task_handle = NULL;
-static QueueHandle_t laser_queue;
-static EventGroupHandle_t device_mode_event_group;
-static SystemMode* current_system_mode;
+static LaserTask* laser_task_instance = nullptr;
 
-bool execute_laser(ButtonEvent evt, Laser& laser);
+LaserTask::LaserTask()
+  : laser_task_handle(NULL),
+    laser_queue(nullptr),
+    device_mode_event_group(nullptr),
+    current_system_mode(nullptr) {
+}
 
-static void laser_task(void *arg) {
-  Laser laser((uint8_t)(uintptr_t)arg); // Pin A0 for laser device
+void LaserTask::start(
+  QueueHandle_t q, 
+  EventGroupHandle_t eg, 
+  SystemMode* mode, 
+  uint8_t pin
+) {
+  laser_queue = q;
+  device_mode_event_group = eg;
+  current_system_mode = mode;
+
+  laser_task_instance = this;
+
+  xTaskCreate(
+    laser_task_static,
+    "laser_task",
+    3072,
+    (void*)(uintptr_t)pin,
+    LASER_TASK_PRIORITY,
+    &laser_task_handle
+  );
+}
+
+void LaserTask::laser_task_static(void *arg) {
+  if (laser_task_instance) {
+    laser_task_instance->laser_task_impl((uint8_t)(uintptr_t)arg);
+  }
+}
+
+void LaserTask::laser_task_impl(uint8_t pin) {
+  Laser laser(pin);
   InputEvent current_input_event;
   for(;;) {
     if(current_system_mode->inputMode == InputMode::SimpleInput) {
@@ -22,27 +51,7 @@ static void laser_task(void *arg) {
   }
 }
 
-void laser_task_start(
-  QueueHandle_t q, 
-  EventGroupHandle_t eg, 
-  SystemMode* mode, 
-  uint8_t pin
-) {
-  laser_queue = q;
-  device_mode_event_group = eg;
-  current_system_mode = mode;
-
-  xTaskCreate(
-    laser_task,
-    "laser_task",
-    3072,
-    (void*)(uintptr_t)pin,
-    LASER_TASK_PRIORITY,
-    &laser_task_handle
-  );
-}
-
-bool execute_laser(ButtonEvent evt, Laser& laser) {
+bool LaserTask::execute_laser(ButtonEvent evt, Laser& laser) {
   switch (evt) {
     case ButtonEvent::SingleClick:
       laser.shortPulse(1, 150);
@@ -68,4 +77,3 @@ bool execute_laser(ButtonEvent evt, Laser& laser) {
   }
   return laser.isBusy();
 }
-} // namespace LaserTask
