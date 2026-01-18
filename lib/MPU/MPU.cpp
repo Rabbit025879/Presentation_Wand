@@ -107,7 +107,7 @@ MotionEvent MPU::_detectEvent() {
   return _event;
 }
 
-AttitudeState MPU::_detectAttitude() {
+byte MPU::_detectAttitude() {
   if(millis() - _attitudeLastUpdateTime < MOTION_DEBOUNCE_DEFAULT) {
     return _attitude; // Debounce
   }
@@ -116,16 +116,18 @@ AttitudeState MPU::_detectAttitude() {
   float angleX = getAngleX();
   float angleY = getAngleY();
 
+  _attitude = ATTITUDE_STATE_NONE;
+
   if(angleX > TILT_THRESHOLD) {
-    _attitude = AttitudeState::TiltDown;
+    _attitude |= ATTITUDE_STATE_TILT_DOWN;
   } else if(angleX < -TILT_THRESHOLD) {
-    _attitude = AttitudeState::TiltUp;
-  } else if(angleY > TILT_THRESHOLD) {
-    _attitude = AttitudeState::TiltCounterClockwise;
+    _attitude |= ATTITUDE_STATE_TILT_UP;
+  }
+
+  if(angleY > TILT_THRESHOLD) {
+    _attitude |= ATTITUDE_STATE_TILT_COUNTERCLOCKWISE;
   } else if(angleY < -TILT_THRESHOLD) {
-    _attitude = AttitudeState::TiltClockwise;
-  } else {
-    _attitude = AttitudeState::None;
+    _attitude |= ATTITUDE_STATE_TILT_CLOCKWISE;
   }
 
   return _attitude;

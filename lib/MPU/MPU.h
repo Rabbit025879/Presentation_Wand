@@ -22,12 +22,12 @@ private:
   int _gyro_config;
   int _acc_config;
   MotionEvent _event = MotionEvent::None;
-  AttitudeState _attitude = AttitudeState::None;
+  byte _attitude = ATTITUDE_STATE_NONE;
   uint32_t _eventLastUpdateTime = 0;
   uint32_t _attitudeLastUpdateTime = 0;
   
   MotionEvent _detectEvent();
-  AttitudeState _detectAttitude();
+  byte _detectAttitude();
   
   // Get gyro data in device frame (gravity-aligned)
   Vec3 _getGyroDeviceFrame();

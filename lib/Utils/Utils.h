@@ -61,25 +61,23 @@ enum class MotionEvent {
   FlickRight
 };
 
-// TODO: Modified to superposition of states if needed(maybe using bitmask)
-enum class AttitudeState {
-  None,
-  // OutOfPlane
-  TiltUp,
-  TiltDown,
-  TiltClockwise,
-  TiltCounterClockwise,
-  // InPlane
-  TiltLeft,
-  TiltRight
-};
+// AttitudeState bitmask
+// OutOfPlane
+#define ATTITUDE_STATE_NONE                  (0)
+#define ATTITUDE_STATE_TILT_UP               (1 << 0)
+#define ATTITUDE_STATE_TILT_DOWN             (1 << 1)
+#define ATTITUDE_STATE_TILT_CLOCKWISE        (1 << 2)
+#define ATTITUDE_STATE_TILT_COUNTERCLOCKWISE (1 << 3)
+// InPlane(Can't detect reliably)
+#define ATTITUDE_STATE_TILT_LEFT             (1 << 4)
+#define ATTITUDE_STATE_TILT_RIGHT            (1 << 5)
 
 struct MotionState {
   MotionEvent motionEvent;
-  AttitudeState attitudeState;
+  byte attitudeState;
 
-  MotionState() : motionEvent(MotionEvent::None), attitudeState(AttitudeState::None) {}
-  MotionState(MotionEvent mevt, AttitudeState astate) : motionEvent(mevt), attitudeState(astate) {}
+  MotionState() : motionEvent(MotionEvent::None), attitudeState(ATTITUDE_STATE_NONE) {}
+  MotionState(MotionEvent mevt, byte astate) : motionEvent(mevt), attitudeState(astate) {}
 };
 
 struct InputEvent {
