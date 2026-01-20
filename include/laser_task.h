@@ -10,8 +10,7 @@ public:
   void start(
     QueueHandle_t q, 
     EventGroupHandle_t eg, 
-    SystemMode* mode, 
-    uint8_t pin = LASER_PIN
+    SystemMode* mode
   );
 
 private:
@@ -20,8 +19,7 @@ private:
   EventGroupHandle_t device_mode_event_group;
   SystemMode* current_system_mode;
 
-  void laser_task_impl(uint8_t pin);
-  bool execute_laser(ButtonEvent evt, Laser& laser);
+  void laser_task_impl();
   
   static void laser_task_static(void *arg);
 };

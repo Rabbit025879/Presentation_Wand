@@ -20,7 +20,10 @@ private:
   SystemMode* current_system_mode;
 
   void hid_task_impl();
-  void hid_execute(ButtonEvent evt, BLEHID& blehid);
+  void hid_execute_presentation_simple(InputEvent& evt, BLEHID& blehid);
+  void hid_execute_presentation_motion(InputEvent& evt, BLEHID& blehid);
+  void hid_execute_media_simple(InputEvent& evt, BLEHID& blehid);
+  void hid_execute_media_motion(InputEvent& evt, BLEHID& blehid);
   
   static void hid_task_static(void *arg);
 };

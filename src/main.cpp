@@ -5,7 +5,7 @@ static EventGroupHandle_t device_mode_event_group = NULL;
 static QueueHandle_t haptics_queue = NULL;
 static QueueHandle_t laser_queue = NULL;
 static QueueHandle_t hid_queue = NULL;
-static InputEvent* input_event = new InputEvent(ButtonState(), MotionState());
+static InputEvent* input_event = new InputEvent(ButtonState(), ButtonState(), ButtonState(), MotionState());
 static SystemMode* currentSystemMode = new SystemMode{FunctionMode::Presentation, InputMode::MotionControl};
 // Instantiate task objects
 static ButtonTask button_task;
@@ -23,9 +23,9 @@ void setup() {
   device_mode_event_group = xEventGroupCreate();
   xEventGroupSetBits(device_mode_event_group, USING_HAPTICS | USING_LASER | USING_HID); // Enable Haptics, Laser, HID by default
 
-  haptics_queue = xQueueCreate(2, sizeof(InputEvent));
-  laser_queue = xQueueCreate(2, sizeof(InputEvent));
-  hid_queue = xQueueCreate(2, sizeof(InputEvent));
+  haptics_queue = xQueueCreate(3, sizeof(InputEvent));
+  laser_queue = xQueueCreate(3, sizeof(InputEvent));
+  hid_queue = xQueueCreate(3, sizeof(InputEvent));
 
   button_task.start(
     haptics_queue, 
@@ -33,21 +33,18 @@ void setup() {
     hid_queue, 
     device_mode_event_group, 
     input_event, 
-    currentSystemMode, 
-    BUTTON_PIN
-  ); // Pin 10 for button
+    currentSystemMode
+  );
   
   haptics_task.start(
     haptics_queue, 
     device_mode_event_group, 
-    currentSystemMode, 
-    HAPTICS_PIN
+    currentSystemMode
   ); // Pin A0 for haptics
   laser_task.start(
     laser_queue, 
     device_mode_event_group, 
-    currentSystemMode, 
-    LASER_PIN
+    currentSystemMode
   ); // Pin A1 for laser
   hid_task.start(
     hid_queue, 

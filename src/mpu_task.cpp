@@ -54,30 +54,32 @@ void MPUTask::mpu_task_impl() {
   uint32_t debounceDelay = 20; // milliseconds
   for(;;) {
     mpu.update();
-    switch (current_system_mode->inputMode) {
-      case InputMode::SimpleInput:
-        // No action needed
-        break;
-      case InputMode::Command:
-        // No action needed
-        break;
-      case InputMode::MotionControl:
-        // if(xEventGroupGetBits(device_mode_event_group) & USING_MPU) {
-          current_input_event->motionState = mpu.getMotionState();
-          // Serial.print("Motion Event: ");
-          // Serial.print(static_cast<int>(current_input_event->motionState.motionEvent));
-          // Send motion event if any detected
-          if(current_input_event->motionState.attitudeState != _lastInputEvent.motionState.attitudeState) {
-            // Serial.print("Attitude State Sent- ");
-            // Serial.println(static_cast<int>(current_input_event->motionState.attitudeState));
+    if(current_system_mode->inputMode == InputMode::MotionControl) {
+      if(xEventGroupGetBits(device_mode_event_group) & USING_MPU) {
+        current_input_event->motionState = mpu.getMotionState();
+        // Send motion event if any detected
+        if(current_input_event->motionState.motionEvent != _lastInputEvent.motionState.motionEvent ||
+           current_input_event->motionState.motionEvent == MotionEvent::RotateClockwise ||
+           current_input_event->motionState.motionEvent == MotionEvent::RotateCounterClockwise) {
+          if(millis() - _clock > CONTINUOUS_EVENT_THROTTLE) { // Throttle rapid events for fast output
+            if(current_input_event->motionState.motionEvent == MotionEvent::RotateClockwise ||
+              current_input_event->motionState.motionEvent == MotionEvent::RotateCounterClockwise) {
+              _clock = millis();
+            }
+            if(xEventGroupGetBits(device_mode_event_group) & USING_HID) {
+              xQueueSend(hid_queue, current_input_event, portMAX_DELAY); // Send to HID task
+            }
+            if(xEventGroupGetBits(device_mode_event_group) & USING_HAPTICS) {
+              xQueueSend(haptics_queue, current_input_event, portMAX_DELAY); // Send to Haptics task
+            }
           }
-          xQueueSend(hid_queue, current_input_event, portMAX_DELAY); // Send to HID task
-          _lastInputEvent = *current_input_event;
-        // }
-        break;
-      default:
-        break;
+        }
+        _lastInputEvent = *current_input_event;
+      } else {
+        // Clear motion event when MPU is disabled
+        mpu.resetEventDetection();
+      }
     }
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(5));
   }
 }

@@ -10,8 +10,7 @@ public:
   void start(
     QueueHandle_t q, 
     EventGroupHandle_t eg, 
-    SystemMode* mode, 
-    uint8_t pin = HAPTICS_PIN
+    SystemMode* mode
   );
 
 private:
@@ -20,7 +19,7 @@ private:
   EventGroupHandle_t device_mode_event_group;
   SystemMode* current_system_mode;
 
-  void haptics_task_impl(uint8_t pin);
+  void haptics_task_impl();
   bool execute_haptics(ButtonEvent evt, Haptics& haptics);
   
   static void haptics_task_static(void *arg);

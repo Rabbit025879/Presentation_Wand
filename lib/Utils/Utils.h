@@ -17,17 +17,22 @@
 #define MPU_TASK_PRIORITY       3
 #define OTA_TASK_PRIORITY       5
 
-#define BUTTON_PIN  10
+#define POINTER_BUTTON_PIN     10
+#define THUMBS_UP_BUTTON_PIN    7
+#define THUMBS_DOWN_BUTTON_PIN  6
 #define HAPTICS_PIN A0
 #define LASER_PIN   A1
+#define LED_PIN     A2
 
 #define BUTTON_DEBOUNCE_DEFAULT 50 // milliseconds
-#define BUTTON_PRESS_WAIT_TIME 700 // milliseconds
-#define BUTTON_SHORT_PRESS_THRESHOLD 200 // milliseconds
+#define BUTTON_PRESS_WAIT_TIME 200 // milliseconds
+#define BUTTON_SHORT_PRESS_THRESHOLD 150 // milliseconds
 
-#define MOTION_DEBOUNCE_DEFAULT 500 // milliseconds
-#define TILT_THRESHOLD 15.0 // degrees
-#define FLICK_THRESHOLD 0.5 // g
+#define MOTION_DEBOUNCE_DEFAULT 200 // milliseconds
+#define TILT_THRESHOLD 30.0 // degrees
+#define FLICK_THRESHOLD 250.0 // degrees/second
+#define ROTATE_THRESHOLD 700.0 // degrees/second
+#define CONTINUOUS_EVENT_THROTTLE 500 // milliseconds
 
 enum class ButtonEvent {
   None,
@@ -47,6 +52,21 @@ struct ButtonState {
 
   ButtonState() : isPressed(false), event(ButtonEvent::None) {}
   ButtonState(bool pressed, ButtonEvent evt) : isPressed(pressed), event(evt) {}
+};
+
+struct MultiButtonState {
+  ButtonState pointerButton;
+  ButtonState thumbsUpButton;
+  ButtonState thumbsDownButton;
+
+  MultiButtonState() 
+    : pointerButton(ButtonState()), 
+      thumbsUpButton(ButtonState()), 
+      thumbsDownButton(ButtonState()) {}
+  MultiButtonState(ButtonState pbutton, ButtonState ubbutton, ButtonState dbbutton) 
+    : pointerButton(pbutton), 
+      thumbsUpButton(ubbutton), 
+      thumbsDownButton(dbbutton) {}
 };
 
 enum class MotionEvent {
@@ -80,18 +100,23 @@ struct MotionState {
   MotionState(MotionEvent mevt, byte astate) : motionEvent(mevt), attitudeState(astate) {}
 };
 
+// Multi-button support: Pointer, ThumbsUp, ThumbsDown
 struct InputEvent {
-  ButtonState buttonState;
+  MultiButtonState buttonStates;
   MotionState motionState;
 
-  InputEvent() : buttonState(ButtonState()), motionState(MotionState()) {}
-  InputEvent(ButtonState bstate, MotionState mstate) : buttonState(bstate), motionState(mstate) {}
+  InputEvent() 
+      : buttonStates(MultiButtonState()), 
+      motionState(MotionState()) {}
+  InputEvent(ButtonState pbutton, ButtonState ubbutton, ButtonState dbbutton, MotionState mstate) 
+    : buttonStates(MultiButtonState(pbutton, ubbutton, dbbutton)), 
+      motionState(mstate) {}
 };
 
 enum class InputMode {
   SimpleInput,
-  Command,
-  MotionControl
+  MotionControl,
+  Command
 };
 
 enum class FunctionMode {
@@ -101,12 +126,38 @@ enum class FunctionMode {
   Keyboard
 };
 
+enum class ButtonID {
+  Pointer,
+  ThumbsUp,
+  ThumbsDown
+};
+
 struct SystemMode {
-  FunctionMode mode;
+  FunctionMode functionMode;
   InputMode inputMode;
 
-  SystemMode() : mode(FunctionMode::Presentation), inputMode(InputMode::SimpleInput) {}
-  SystemMode(FunctionMode m, InputMode im) : mode(m), inputMode(im) {}
+  SystemMode() : functionMode(FunctionMode::Presentation), inputMode(InputMode::SimpleInput) {}
+  SystemMode(FunctionMode fm, InputMode im) : functionMode(fm), inputMode(im) {}
+};
+
+// Settings and status tracking structure
+struct DeviceSettings {
+  uint8_t hapticsIntensity;
+  uint8_t laserIntensity;
+  uint8_t ledIntensity;
+  bool hapticsEnabled;
+  bool laserEnabled;
+  bool ledEnabled;
+  bool motionDetectLocked;
+  
+  DeviceSettings() 
+    : hapticsIntensity(100), 
+      laserIntensity(100), 
+      ledIntensity(100),
+      hapticsEnabled(true), 
+      laserEnabled(true), 
+      ledEnabled(true),
+      motionDetectLocked(false) {}
 };
 
 #endif // UTILS_H

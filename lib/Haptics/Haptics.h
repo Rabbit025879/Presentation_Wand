@@ -5,7 +5,7 @@
 
 class Haptics : public OutputDevice {
 public:
-  Haptics(uint8_t pin);
+  Haptics(uint8_t pin = HAPTICS_PIN);
 };
 
 #endif // HAPTICS_H

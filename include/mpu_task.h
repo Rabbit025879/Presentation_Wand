@@ -24,8 +24,9 @@ private:
   EventGroupHandle_t device_mode_event_group;
   InputEvent* current_input_event;
   SystemMode* current_system_mode;
+  uint32_t _clock = 0;
 
-  InputEvent _lastInputEvent{ButtonState(), MotionState()};
+  InputEvent _lastInputEvent{ButtonState(), ButtonState(), ButtonState(), MotionState()};
 
   void mpu_task_impl();
   

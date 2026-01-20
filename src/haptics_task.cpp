@@ -12,8 +12,7 @@ HapticsTask::HapticsTask()
 void HapticsTask::start(
   QueueHandle_t q, 
   EventGroupHandle_t eg, 
-  SystemMode* mode, 
-  uint8_t pin
+  SystemMode* mode
 ) {
   haptics_queue = q;
   device_mode_event_group = eg;
@@ -25,7 +24,7 @@ void HapticsTask::start(
     haptics_task_static,
     "haptics_task",
     3072,
-    (void*)(uintptr_t)pin,
+    NULL,
     HAPTICS_TASK_PRIORITY,
     &haptics_task_handle
   );
@@ -33,35 +32,44 @@ void HapticsTask::start(
 
 void HapticsTask::haptics_task_static(void *arg) {
   if (haptics_task_instance) {
-    haptics_task_instance->haptics_task_impl((uint8_t)(uintptr_t)arg);
+    haptics_task_instance->haptics_task_impl();
   }
 }
 
-void HapticsTask::haptics_task_impl(uint8_t pin) {
-  Haptics haptics(pin);
+void HapticsTask::haptics_task_impl() {
+  Haptics haptics;
   InputEvent current_input_event;
   for(;;) {
     switch (current_system_mode->inputMode) {
       case InputMode::SimpleInput:
         if(xQueueReceive(haptics_queue, &current_input_event, portMAX_DELAY)) {
-          if(current_input_event.buttonState.isPressed == true) haptics.turnOn(200);
-          else                                                  haptics.turnOff();
+          if(current_input_event.buttonStates.pointerButton.isPressed == true)  haptics.turnOn(150);
+          else                                                                  haptics.turnOff();
         }
         break;
-      case InputMode::Command:
-        Serial.println("[Haptics Task]: Waiting for button event...");
+
+      case InputMode::MotionControl:
+        // Send haptics if motion event detected
         if(xQueueReceive(haptics_queue, &current_input_event, portMAX_DELAY)) {
-          Serial.print("[Haptics Task]: Received button event ");
-          Serial.println(static_cast<int>(current_input_event.buttonState.event));
           // If haptics is busy, wait until it finishes
-          while(execute_haptics(current_input_event.buttonState.event, haptics) && current_input_event.buttonState.event != ButtonEvent::Hold) {
+          if(current_input_event.motionState.motionEvent != MotionEvent::None) {
+            do {
+              haptics.shortPulse(1, 150);
+              vTaskDelay(pdMS_TO_TICKS(10));
+            } while(haptics.isBusy());
+          }
+        }
+        break;
+
+      case InputMode::Command:
+        if(xQueueReceive(haptics_queue, &current_input_event, portMAX_DELAY)) {
+          // If haptics is busy, wait until it finishes
+          while(execute_haptics(current_input_event.buttonStates.pointerButton.event, haptics) && current_input_event.buttonStates.pointerButton.event != ButtonEvent::Hold) {
             vTaskDelay(pdMS_TO_TICKS(10));
           }  
         }
         break;
-      case InputMode::MotionControl:
-        // To be implemented
-        break;
+
       default:
         break;
     }
@@ -72,19 +80,19 @@ void HapticsTask::haptics_task_impl(uint8_t pin) {
 bool HapticsTask::execute_haptics(ButtonEvent evt, Haptics& haptics) {
   switch (evt) {
     case ButtonEvent::SingleClick:
-      haptics.shortPulse(1, 200);
+      haptics.shortPulse(1, 150);
       break;
     case ButtonEvent::DoubleClick:
-      haptics.shortPulse(2, 200);
+      haptics.shortPulse(2, 150);
       break;
     case ButtonEvent::TripleClick:
-      haptics.shortPulse(3, 200);
+      haptics.shortPulse(3, 150);
       break;
     case ButtonEvent::SingleLongPress:
-      haptics.longPulse(1, 200);
+      haptics.longPulse(1, 150);
       break;
     case ButtonEvent::Hold:
-      haptics.turnOn(200);
+      haptics.turnOn(150);
       break;
     case ButtonEvent::None:
       haptics.turnOff();
