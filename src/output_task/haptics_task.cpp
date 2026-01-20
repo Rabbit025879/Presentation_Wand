@@ -1,4 +1,4 @@
-#include "haptics_task.h"
+#include "output_task/haptics_task.h"
 
 static HapticsTask* haptics_task_instance = nullptr;
 

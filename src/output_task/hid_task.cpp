@@ -1,4 +1,4 @@
-#include "hid_task.h"
+#include "output_task/hid_task.h"
 
 static HIDTask* hid_task_instance = nullptr;
 

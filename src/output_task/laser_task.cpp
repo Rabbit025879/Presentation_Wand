@@ -1,4 +1,4 @@
-#include "laser_task.h"
+#include "output_task/laser_task.h"
 
 static LaserTask* laser_task_instance = nullptr;
 
@@ -43,8 +43,10 @@ void LaserTask::laser_task_impl() {
     if(current_system_mode->inputMode == InputMode::SimpleInput ||
        current_system_mode->inputMode == InputMode::MotionControl) {
       if(xQueueReceive(laser_queue, &current_input_event, portMAX_DELAY)) {
-        if(current_input_event.buttonStates.pointerButton.isPressed == true)  laser.turnOn(150);
-        else                                                                  laser.turnOff();
+        if(current_system_mode->functionMode == FunctionMode::Presentation) {
+          if(current_input_event.buttonStates.pointerButton.isPressed == true)  laser.turnOn(150);
+          else                                                                  laser.turnOff();
+        }
       }
     }
     vTaskDelay(pdMS_TO_TICKS(5));
