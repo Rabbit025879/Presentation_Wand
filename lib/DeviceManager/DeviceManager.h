@@ -2,7 +2,7 @@
 #define SETTINGS_MANAGER_H
 
 #include "Utils.h"
-
+// TODO: To be implemented: Persistent storage (e.g., EEPROM, SPIFFS)
 class SettingsManager {
 public:
   SettingsManager();

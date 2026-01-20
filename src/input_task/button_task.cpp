@@ -150,6 +150,7 @@ void ButtonTask::motion_control_specific() {
   }
 }
 
+// TODO: To be implemented
 void ButtonTask::handle_command_mode(DeviceSettings& settings, SettingsManager& sm, bool& in_settings, bool& in_tuning, uint8_t& tuning_target) {
   // Pointer Button: Single Click to switch Function Mode
   if(current_input_event->buttonStates.pointerButton.event == ButtonEvent::SingleClick &&
