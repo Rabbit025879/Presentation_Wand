@@ -1,5 +1,6 @@
 #include "output_task/ota_task.h"
 #include "DeviceManager.h"
+#include "Utils.h"
 
 static OTATask* ota_task_instance = nullptr;
 
@@ -32,17 +33,20 @@ void OTATask::ota_task_static(void *arg) {
 
 void OTATask::ota_task_impl() {
   OTA ota;
+  
   for(;;) {
     if(device_manager->isOTAEnabled()) {
       if(!initialized) {
         ota.begin();
         initialized = true;
+        DEBUG_PRINTLN("[OTA Task] Started");
       }
       ota.loop();
     } else {
       if(initialized) {
         ota.end();
         initialized = false;
+        DEBUG_PRINTLN("[OTA Task] Stopped");
       }
     }
     vTaskDelay(pdMS_TO_TICKS(5));

@@ -1,5 +1,6 @@
 #include "output_task/laser_task.h"
 #include "DeviceManager.h"
+#include "Utils.h"
 
 static LaserTask* laser_task_instance = nullptr;
 
@@ -40,16 +41,19 @@ void LaserTask::laser_task_static(void *arg) {
 void LaserTask::laser_task_impl() {
   Laser laser;
   InputEvent current_input_event;
+  
   for(;;) {
     if(xQueueReceive(laser_queue, &current_input_event, portMAX_DELAY)) {
-      if(current_system_mode->inputMode == InputMode::SimpleInput ||
-        current_system_mode->inputMode == InputMode::MotionControl) {
-        if(current_system_mode->functionMode == FunctionMode::Presentation) {
-          if(current_input_event.buttonStates.pointerButton.isPressed == true)  laser.turnOn(device_manager->getLaserIntensity());
-          else                                                                  laser.turnOff();
+      // Laser only active in presentation mode and non-command input modes
+      if((current_system_mode->inputMode == InputMode::SimpleInput ||
+          current_system_mode->inputMode == InputMode::MotionControl) &&
+         current_system_mode->functionMode == FunctionMode::Presentation) {
+        if(current_input_event.buttonStates.pointerButton.isPressed) {
+          laser.turnOn(device_manager->getLaserIntensity());
+        } else {
+          laser.turnOff();
         }
       } else {
-        // In Command Mode, ensure laser is off
         laser.turnOff();
       }
     } 

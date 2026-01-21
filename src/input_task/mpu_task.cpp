@@ -1,5 +1,6 @@
 #include "input_task/mpu_task.h"
 #include "DeviceManager.h"
+#include "Utils.h"
 
 static MPUTask* mpu_task_instance = nullptr;
 
@@ -48,36 +49,42 @@ void MPUTask::mpu_task_static(void *arg) {
 
 void MPUTask::mpu_task_impl() {
   MPU mpu;
+  
+  // Initialize MPU sensor
   while(!mpu.begin()) {
-    Serial.println("[MPU Task]: Failed to initialize");
+    DEBUG_PRINTLN("[MPU Task] Failed to initialize, retrying...");
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
-  uint32_t debounceDelay = 20; // milliseconds
+  DEBUG_PRINTLN("[MPU Task] Initialized successfully");
+  
   for(;;) {
     mpu.update();
     if(current_system_mode->inputMode == InputMode::MotionControl) {
       if(device_manager->isFeatureEnabled(USING_MPU)) {
         current_input_event->motionState = mpu.getMotionState();
-        // Send motion event if any detected
+        
+        // Send motion event if detected or continuous rotation
         if(current_input_event->motionState.motionEvent != _lastInputEvent.motionState.motionEvent ||
            current_input_event->motionState.motionEvent == MotionEvent::RotateClockwise ||
            current_input_event->motionState.motionEvent == MotionEvent::RotateCounterClockwise) {
-          if(millis() - _clock > CONTINUOUS_EVENT_THROTTLE) { // Throttle rapid events for fast output
+          
+          // Throttle continuous rotation events
+          if(millis() - _clock > CONTINUOUS_EVENT_THROTTLE) {
             if(current_input_event->motionState.motionEvent == MotionEvent::RotateClockwise ||
-              current_input_event->motionState.motionEvent == MotionEvent::RotateCounterClockwise) {
+               current_input_event->motionState.motionEvent == MotionEvent::RotateCounterClockwise) {
               _clock = millis();
             }
+            
             if(device_manager->isFeatureEnabled(USING_HID)) {
-              xQueueSend(hid_queue, current_input_event, portMAX_DELAY); // Send to HID task
+              xQueueSend(hid_queue, current_input_event, portMAX_DELAY);
             }
             if(device_manager->isFeatureEnabled(USING_HAPTICS)) {
-              xQueueSend(haptics_queue, current_input_event, portMAX_DELAY); // Send to Haptics task
+              xQueueSend(haptics_queue, current_input_event, portMAX_DELAY);
             }
           }
         }
         _lastInputEvent = *current_input_event;
       } else {
-        // Clear motion event when MPU is disabled
         mpu.resetEventDetection();
       }
     }
