@@ -7,7 +7,7 @@ static QueueHandle_t hid_queue = NULL;
 
 // Shared system state
 static InputEvent* input_event = new InputEvent();
-static SystemMode* current_system_mode = new SystemMode(FunctionMode::Presentation, InputMode::MotionControl);
+static SystemMode* current_system_mode = new SystemMode(FunctionMode::Presentation, InputMode::SimpleInput);
 
 // Task objects
 static DeviceManager device_manager;
