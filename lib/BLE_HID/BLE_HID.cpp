@@ -192,7 +192,7 @@ void BLEHID::begin(void)
   onStarted(pServer);
 
   advertising = pServer->getAdvertising();	
-  advertising->setAppearance(HID_MOUSE); // TODO: test for a best appearance
+  advertising->setAppearance(HID_KEYBOARD);
   advertising->addServiceUUID(hid->hidService()->getUUID());
   advertising->setScanResponse(false);
   advertising->start();

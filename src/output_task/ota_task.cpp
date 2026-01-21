@@ -1,15 +1,17 @@
-#include "ota_task.h"
+#include "output_task/ota_task.h"
+#include "DeviceManager.h"
+#include "Utils.h"
 
 static OTATask* ota_task_instance = nullptr;
 
 OTATask::OTATask()
   : ota_task_handle(NULL),
-    device_mode_event_group(nullptr),
+    device_manager(nullptr),
     initialized(false) {
 }
 
-void OTATask::start(EventGroupHandle_t eg) {
-  device_mode_event_group = eg;
+void OTATask::start(DeviceManager* device_manager) {
+  this->device_manager = device_manager;
 
   ota_task_instance = this;
 
@@ -31,17 +33,20 @@ void OTATask::ota_task_static(void *arg) {
 
 void OTATask::ota_task_impl() {
   OTA ota;
+  
   for(;;) {
-    if(xEventGroupGetBits(device_mode_event_group) & USING_OTA_UPLOAD) {
+    if(device_manager->isOTAEnabled()) {
       if(!initialized) {
         ota.begin();
         initialized = true;
+        DEBUG_PRINTLN("[OTA Task] Started");
       }
       ota.loop();
     } else {
       if(initialized) {
         ota.end();
         initialized = false;
+        DEBUG_PRINTLN("[OTA Task] Stopped");
       }
     }
     vTaskDelay(pdMS_TO_TICKS(5));

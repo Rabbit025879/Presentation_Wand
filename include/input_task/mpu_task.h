@@ -3,6 +3,8 @@
 
 #include "MPU.h"
 
+class DeviceManager;
+
 class MPUTask {
 public:
   MPUTask();
@@ -11,7 +13,7 @@ public:
     QueueHandle_t haptics_q, 
     QueueHandle_t laser_q, 
     QueueHandle_t hid_q, 
-    EventGroupHandle_t eg,
+    DeviceManager* device_manager,
     InputEvent* input_event, 
     SystemMode* mode
   );
@@ -21,11 +23,12 @@ private:
   QueueHandle_t haptics_queue;
   QueueHandle_t laser_queue;
   QueueHandle_t hid_queue;
-  EventGroupHandle_t device_mode_event_group;
+  DeviceManager* device_manager;
   InputEvent* current_input_event;
   SystemMode* current_system_mode;
+  uint32_t _clock = 0;
 
-  InputEvent _lastInputEvent{ButtonState(), MotionState()};
+  InputEvent _lastInputEvent{ButtonState(), ButtonState(), ButtonState(), MotionState()};
 
   void mpu_task_impl();
   

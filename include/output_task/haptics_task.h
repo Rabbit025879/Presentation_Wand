@@ -3,25 +3,25 @@
 
 #include "Haptics.h"
 
+class DeviceManager;
+
 class HapticsTask {
 public:
   HapticsTask();
   
   void start(
     QueueHandle_t q, 
-    EventGroupHandle_t eg, 
-    SystemMode* mode, 
-    uint8_t pin = HAPTICS_PIN
+    DeviceManager* device_manager, 
+    SystemMode* mode
   );
 
 private:
   TaskHandle_t haptics_task_handle;
   QueueHandle_t haptics_queue;
-  EventGroupHandle_t device_mode_event_group;
+  DeviceManager* device_manager;
   SystemMode* current_system_mode;
 
-  void haptics_task_impl(uint8_t pin);
-  bool execute_haptics(ButtonEvent evt, Haptics& haptics);
+  void haptics_task_impl();
   
   static void haptics_task_static(void *arg);
 };

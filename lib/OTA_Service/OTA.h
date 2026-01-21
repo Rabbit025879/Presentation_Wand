@@ -3,7 +3,6 @@
 
 #include "Utils.h"
 #include <ElegantOTA.h>
-#include <Preferences.h>
 
 class OTA {
 public:
@@ -12,6 +11,7 @@ public:
   void end();
 
   void saveWiFi(const char* ssid, const char* pass) {
+    Preferences prefs;
     prefs.begin("wifi", false);  // namespace = "wifi"
     prefs.putString("ssid", ssid);
     prefs.putString("pass", pass);
@@ -19,10 +19,11 @@ public:
   }
 
 private:
-  Preferences prefs;
   String WIFI_SSID, WIFI_PASS;
   
+  // TODO: Load WiFi credentials from DeviceManager settings
   void loadWiFiCredentials() {
+    Preferences prefs;
     prefs.begin("wifi", true);  // namespace = "wifi"
     WIFI_SSID = prefs.getString("ssid", "");
     WIFI_PASS = prefs.getString("pass", "");

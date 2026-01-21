@@ -1,13 +1,16 @@
-#include "main.h" 
+#include "main.h"
 
-// Global variables for FreeRTOS objects
-static EventGroupHandle_t device_mode_event_group = NULL;
+// FreeRTOS queue handles
 static QueueHandle_t haptics_queue = NULL;
 static QueueHandle_t laser_queue = NULL;
 static QueueHandle_t hid_queue = NULL;
-static InputEvent* input_event = new InputEvent(ButtonState(), MotionState());
-static SystemMode* currentSystemMode = new SystemMode{FunctionMode::Presentation, InputMode::MotionControl};
-// Instantiate task objects
+
+// Shared system state
+static InputEvent* input_event = new InputEvent();
+static SystemMode* current_system_mode = new SystemMode(FunctionMode::Presentation, InputMode::SimpleInput);
+
+// Task objects
+static DeviceManager device_manager;
 static ButtonTask button_task;
 static HapticsTask haptics_task;
 static LaserTask laser_task;
@@ -16,59 +19,27 @@ static MPUTask mpu_task;
 static OTATask ota_task;
 
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(115200);
-
-  // Setup Tasks
-  device_mode_event_group = xEventGroupCreate();
-  xEventGroupSetBits(device_mode_event_group, USING_HAPTICS | USING_LASER | USING_HID); // Enable Haptics, Laser, HID by default
-
-  haptics_queue = xQueueCreate(2, sizeof(InputEvent));
-  laser_queue = xQueueCreate(2, sizeof(InputEvent));
-  hid_queue = xQueueCreate(2, sizeof(InputEvent));
-
-  button_task.start(
-    haptics_queue, 
-    laser_queue, 
-    hid_queue, 
-    device_mode_event_group, 
-    input_event, 
-    currentSystemMode, 
-    BUTTON_PIN
-  ); // Pin 10 for button
   
-  haptics_task.start(
-    haptics_queue, 
-    device_mode_event_group, 
-    currentSystemMode, 
-    HAPTICS_PIN
-  ); // Pin A0 for haptics
-  laser_task.start(
-    laser_queue, 
-    device_mode_event_group, 
-    currentSystemMode, 
-    LASER_PIN
-  ); // Pin A1 for laser
-  hid_task.start(
-    hid_queue, 
-    device_mode_event_group, 
-    currentSystemMode
-  );
-  mpu_task.start(
-    haptics_queue, 
-    laser_queue, 
-    hid_queue, 
-    device_mode_event_group, 
-    input_event, 
-    currentSystemMode
-  );
-  ota_task.start(
-    device_mode_event_group
-  );
+  // Create queues for inter-task communication
+  haptics_queue = xQueueCreate(3, sizeof(InputEvent));
+  laser_queue = xQueueCreate(3, sizeof(InputEvent));
+  hid_queue = xQueueCreate(3, sizeof(InputEvent));
 
+  // Initialize device manager
+  device_manager.begin();
+
+  // Start input tasks
+  button_task.start(haptics_queue, laser_queue, hid_queue, &device_manager, input_event, current_system_mode);
+  mpu_task.start(haptics_queue, laser_queue, hid_queue, &device_manager, input_event, current_system_mode);
+  
+  // Start output tasks
+  haptics_task.start(haptics_queue, &device_manager, current_system_mode);
+  laser_task.start(laser_queue, &device_manager, current_system_mode);
+  hid_task.start(hid_queue, &device_manager, current_system_mode);
+  ota_task.start(&device_manager);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   vTaskDelay(pdMS_TO_TICKS(1000));
 }

@@ -3,15 +3,17 @@
 
 #include "OTA.h"
 
+class DeviceManager;
+
 class OTATask {
 public:
   OTATask();
   
-  void start(EventGroupHandle_t eg);
+  void start(DeviceManager* device_manager);
 
 private:
   TaskHandle_t ota_task_handle;
-  EventGroupHandle_t device_mode_event_group;
+  DeviceManager* device_manager;
   bool initialized;
 
   void ota_task_impl();

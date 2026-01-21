@@ -1,7 +1,9 @@
 #ifndef BUTTON_TASK_H
 #define BUTTON_TASK_H
 
-#include "Button.h"
+#include "MultiButton.h"
+
+class DeviceManager;
 
 class ButtonTask {
 public:
@@ -11,10 +13,9 @@ public:
     QueueHandle_t haptics_q, 
     QueueHandle_t laser_q, 
     QueueHandle_t hid_q, 
-    EventGroupHandle_t eg, 
+    DeviceManager* device_manager,
     InputEvent* input_event,
-    SystemMode* mode, 
-    uint8_t pin = BUTTON_PIN
+    SystemMode* mode
   );
 
 private:
@@ -22,12 +23,20 @@ private:
   QueueHandle_t haptics_queue;
   QueueHandle_t laser_queue;
   QueueHandle_t hid_queue;
-  EventGroupHandle_t device_mode_event_group;
+  DeviceManager* device_manager;
   InputEvent* current_input_event;
   SystemMode* current_system_mode;
 
-  void button_task_impl(uint8_t pin);
-  void toggle_event_group_bit(EventBits_t bit);
+  InputEvent _lastInputEvent;
+  InputMode _lastInputMode;
+
+  bool in_tuning = false;
+  uint8_t tuning_target = 0; // 0=haptics, 1=laser, 2=led
+
+  void button_task_impl();
+  void send_queue(QueueHandle_t queue, EventBits_t bit);
+  void motion_control_specific();
+  void handle_command_mode();
   
   static void button_task_static(void *arg);
 };
