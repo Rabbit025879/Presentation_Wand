@@ -7,5 +7,6 @@
 #include "output_task/hid_task.h"
 #include "input_task/mpu_task.h"
 #include "output_task/ota_task.h"
+#include "DeviceManager.h"
 
 #endif // MAIN_H

@@ -3,20 +3,22 @@
 
 #include "Laser.h"
 
+class DeviceManager;
+
 class LaserTask {
 public:
   LaserTask();
   
   void start(
     QueueHandle_t q, 
-    EventGroupHandle_t eg, 
+    DeviceManager* device_manager, 
     SystemMode* mode
   );
 
 private:
   TaskHandle_t laser_task_handle;
   QueueHandle_t laser_queue;
-  EventGroupHandle_t device_mode_event_group;
+  DeviceManager* device_manager;
   SystemMode* current_system_mode;
 
   void laser_task_impl();

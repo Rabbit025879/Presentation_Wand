@@ -1,4 +1,5 @@
 #include "input_task/mpu_task.h"
+#include "DeviceManager.h"
 
 static MPUTask* mpu_task_instance = nullptr;
 
@@ -7,7 +8,7 @@ MPUTask::MPUTask()
     haptics_queue(nullptr),
     laser_queue(nullptr),
     hid_queue(nullptr),
-    device_mode_event_group(nullptr),
+    device_manager(nullptr),
     current_input_event(nullptr),
     current_system_mode(nullptr) {
 }
@@ -16,14 +17,14 @@ void MPUTask::start(
   QueueHandle_t haptics_q, 
   QueueHandle_t laser_q, 
   QueueHandle_t hid_q, 
-  EventGroupHandle_t eg, 
+  DeviceManager* device_manager,
   InputEvent* input_event,
   SystemMode* mode
 ) {
   haptics_queue = haptics_q;
   laser_queue = laser_q;
   hid_queue = hid_q;
-  device_mode_event_group = eg;
+  this->device_manager = device_manager;
   current_input_event = input_event;
   current_system_mode = mode;
 
@@ -55,7 +56,7 @@ void MPUTask::mpu_task_impl() {
   for(;;) {
     mpu.update();
     if(current_system_mode->inputMode == InputMode::MotionControl) {
-      if(xEventGroupGetBits(device_mode_event_group) & USING_MPU) {
+      if(device_manager->isFeatureEnabled(USING_MPU)) {
         current_input_event->motionState = mpu.getMotionState();
         // Send motion event if any detected
         if(current_input_event->motionState.motionEvent != _lastInputEvent.motionState.motionEvent ||
@@ -66,10 +67,10 @@ void MPUTask::mpu_task_impl() {
               current_input_event->motionState.motionEvent == MotionEvent::RotateCounterClockwise) {
               _clock = millis();
             }
-            if(xEventGroupGetBits(device_mode_event_group) & USING_HID) {
+            if(device_manager->isFeatureEnabled(USING_HID)) {
               xQueueSend(hid_queue, current_input_event, portMAX_DELAY); // Send to HID task
             }
-            if(xEventGroupGetBits(device_mode_event_group) & USING_HAPTICS) {
+            if(device_manager->isFeatureEnabled(USING_HAPTICS)) {
               xQueueSend(haptics_queue, current_input_event, portMAX_DELAY); // Send to Haptics task
             }
           }

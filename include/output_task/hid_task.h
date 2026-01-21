@@ -3,20 +3,22 @@
 
 #include "BLE_HID.h"
 
+class DeviceManager;
+
 class HIDTask {
 public:
   HIDTask();
   
   void start(
     QueueHandle_t q, 
-    EventGroupHandle_t eg, 
+    DeviceManager* device_manager, 
     SystemMode* mode
   );
 
 private:
   TaskHandle_t hid_task_handle;
   QueueHandle_t hid_queue;
-  EventGroupHandle_t device_mode_event_group;
+  DeviceManager* device_manager;
   SystemMode* current_system_mode;
 
   void hid_task_impl();

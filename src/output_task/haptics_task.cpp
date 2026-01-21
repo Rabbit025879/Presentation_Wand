@@ -1,21 +1,22 @@
 #include "output_task/haptics_task.h"
+#include "DeviceManager.h"
 
 static HapticsTask* haptics_task_instance = nullptr;
 
 HapticsTask::HapticsTask()
   : haptics_task_handle(NULL),
     haptics_queue(nullptr),
-    device_mode_event_group(nullptr),
+    device_manager(nullptr),
     current_system_mode(nullptr) {
 }
 
 void HapticsTask::start(
   QueueHandle_t q, 
-  EventGroupHandle_t eg, 
+  DeviceManager* device_manager,
   SystemMode* mode
 ) {
   haptics_queue = q;
-  device_mode_event_group = eg;
+  this->device_manager = device_manager;
   current_system_mode = mode;
 
   haptics_task_instance = this;
@@ -43,7 +44,7 @@ void HapticsTask::haptics_task_impl() {
     switch (current_system_mode->inputMode) {
       case InputMode::SimpleInput:
         if(xQueueReceive(haptics_queue, &current_input_event, portMAX_DELAY)) {
-          if(current_input_event.buttonStates.pointerButton.isPressed == true)  haptics.turnOn(150);
+          if(current_input_event.buttonStates.pointerButton.isPressed == true)  haptics.turnOn(device_manager->getHapticsIntensity());
           else                                                                  haptics.turnOff();
         }
         break;
@@ -54,7 +55,13 @@ void HapticsTask::haptics_task_impl() {
           // If haptics is busy, wait until it finishes
           if(current_input_event.motionState.motionEvent != MotionEvent::None) {
             do {
-              haptics.shortPulse(1, 150);
+              haptics.shortPulse(1, device_manager->getHapticsIntensity());
+              vTaskDelay(pdMS_TO_TICKS(10));
+            } while(haptics.isBusy());
+          }
+          if(current_input_event.buttonStates.pointerButton.event == ButtonEvent::DummyEvent) {
+            do {
+              haptics.longPulse(1, device_manager->getHapticsIntensity());
               vTaskDelay(pdMS_TO_TICKS(10));
             } while(haptics.isBusy());
           }
@@ -64,9 +71,23 @@ void HapticsTask::haptics_task_impl() {
       case InputMode::Command:
         if(xQueueReceive(haptics_queue, &current_input_event, portMAX_DELAY)) {
           // If haptics is busy, wait until it finishes
-          while(execute_haptics(current_input_event.buttonStates.pointerButton.event, haptics) && current_input_event.buttonStates.pointerButton.event != ButtonEvent::Hold) {
-            vTaskDelay(pdMS_TO_TICKS(10));
-          }  
+          if(current_input_event.buttonStates.pointerButton.event == ButtonEvent::DummyEvent) {
+            do {
+              haptics.emitPulses(
+                device_manager->getHapticsIntensity(), 
+                10, // duration (100ms units)
+                2, // cycles
+                1  // pause (100ms units)
+              );
+              vTaskDelay(pdMS_TO_TICKS(10));
+            } while(haptics.isBusy());
+          }
+          if(current_input_event.buttonStates.thumbsDownButton.event == ButtonEvent::DummyEvent) {
+            do {
+              haptics.longPulse(1, device_manager->getHapticsIntensity());
+              vTaskDelay(pdMS_TO_TICKS(10));
+            } while(haptics.isBusy());
+          }
         }
         break;
 
@@ -75,31 +96,4 @@ void HapticsTask::haptics_task_impl() {
     }
     vTaskDelay(pdMS_TO_TICKS(5));
   }
-}
-
-bool HapticsTask::execute_haptics(ButtonEvent evt, Haptics& haptics) {
-  switch (evt) {
-    case ButtonEvent::SingleClick:
-      haptics.shortPulse(1, 150);
-      break;
-    case ButtonEvent::DoubleClick:
-      haptics.shortPulse(2, 150);
-      break;
-    case ButtonEvent::TripleClick:
-      haptics.shortPulse(3, 150);
-      break;
-    case ButtonEvent::SingleLongPress:
-      haptics.longPulse(1, 150);
-      break;
-    case ButtonEvent::Hold:
-      haptics.turnOn(150);
-      break;
-    case ButtonEvent::None:
-      haptics.turnOff();
-      break;
-    default:
-      Serial.println("[Haptics Task]: Unknown button event");
-      break;
-  }
-  return haptics.isBusy();
 }

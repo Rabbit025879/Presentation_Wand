@@ -1,16 +1,14 @@
 #include "input_task/button_task.h"
-#include "SettingsManager.h"
+#include "DeviceManager.h"
 
 // Static instance pointer for FreeRTOS callback
 static ButtonTask* button_task_instance = nullptr;
-static SettingsManager* global_settings_manager = nullptr;
-
 ButtonTask::ButtonTask()
   : button_task_handle(NULL),
     haptics_queue(nullptr),
     laser_queue(nullptr),
     hid_queue(nullptr),
-    device_mode_event_group(nullptr),
+    device_manager(nullptr),
     current_input_event(nullptr),
     current_system_mode(nullptr) {
 }
@@ -19,14 +17,14 @@ void ButtonTask::start(
   QueueHandle_t haptics_q, 
   QueueHandle_t laser_q, 
   QueueHandle_t hid_q, 
-  EventGroupHandle_t eg, 
+  DeviceManager* device_manager,
   InputEvent* input_event, 
   SystemMode* mode
 ) {
   haptics_queue = haptics_q;
   laser_queue = laser_q;
   hid_queue = hid_q;
-  device_mode_event_group = eg;
+  this->device_manager = device_manager;
   current_input_event = input_event;
   current_system_mode = mode;
 
@@ -50,17 +48,10 @@ void ButtonTask::button_task_static(void *arg) {
 
 void ButtonTask::button_task_impl() {
   MultiButton multi_button;
-  DeviceSettings device_settings;
-  SettingsManager settings_manager;
-  global_settings_manager = &settings_manager;
-  
-  bool in_settings_menu = false;
-  bool in_tuning_mode = false;
-  uint8_t tuning_target = 0; // 0=haptics, 1=laser, 2=led
 
   for(;;) {
     // ** Update button states
-    current_input_event->buttonStates = multi_button.getState();  // ! Do not change motionState here, it will be updated by MPU task
+    current_input_event->buttonStates = multi_button.getState();
     
     // ** Functionality Mode and Input Mode Switching
     // ** Enter Command Mode
@@ -69,14 +60,14 @@ void ButtonTask::button_task_impl() {
       // Transition to Command Mode if not already there
       if(current_system_mode->inputMode != InputMode::Command) {
         current_system_mode->inputMode = InputMode::Command;
-        in_settings_menu = true;
         Serial.println("Entered Command Mode - OTA/Settings Mode");
-        device_settings = DeviceSettings(); // Reset settings
-        settings_manager.printCurrentSettings();
+        // device_manager->enableFeature(USING_OTA_UPLOAD);
+        xQueueSend(laser_queue, current_input_event, portMAX_DELAY); // Ensure laser is off
+        device_manager->printCurrentSettings();
       } else {
         // Restart Device
         Serial.println("Restarting Device...");
-        current_input_event->buttonStates.pointerButton.isPressed = true; // Dummy event to trigger haptics
+        current_input_event->buttonStates.thumbsDownButton.event = ButtonEvent::DummyEvent; // Dummy event to trigger haptics
         xQueueSend(haptics_queue, current_input_event, portMAX_DELAY);
         vTaskDelay(pdMS_TO_TICKS(2000));
         esp_restart();
@@ -89,9 +80,15 @@ void ButtonTask::button_task_impl() {
       // Switch function mode
       if(current_system_mode->functionMode == FunctionMode::Presentation) {
         current_system_mode->functionMode = FunctionMode::MediaControl;
+        // TODO: Implement haptics feedback for mode switch
+        current_input_event->buttonStates.pointerButton.event = ButtonEvent::DummyEvent; // Dummy event to trigger haptics
+        xQueueSend(haptics_queue, current_input_event, portMAX_DELAY);
         Serial.println("Switched to Media Control Mode");
       } else {  
         current_system_mode->functionMode = FunctionMode::Presentation;
+        // TODO: Implement haptics feedback for mode switch
+        current_input_event->buttonStates.pointerButton.event = ButtonEvent::DummyEvent; // Dummy event to trigger haptics
+        xQueueSend(haptics_queue, current_input_event, portMAX_DELAY);
         Serial.println("Switched to Presentation Mode");
       }
     }
@@ -112,7 +109,7 @@ void ButtonTask::button_task_impl() {
         break;
 
       case InputMode::Command:
-        handle_command_mode(device_settings, settings_manager, in_settings_menu, in_tuning_mode, tuning_target);
+        handle_command_mode();
         break;
 
       default:
@@ -127,12 +124,11 @@ void ButtonTask::button_task_impl() {
 // ** Motion Control Mode
 void ButtonTask::motion_control_specific() { 
   // ** Thumbs Up Button: Special function - Toggle motion detect lock
-  SettingsManager& sm = *global_settings_manager;
   if(current_input_event->buttonStates.thumbsUpButton.event == ButtonEvent::TripleClick &&
      _lastInputEvent.buttonStates.thumbsUpButton.event != ButtonEvent::TripleClick) {
-    sm.toggleMotionDetectLock();
+    device_manager->toggleMotionDetectLock();
     Serial.print("Motion Detect Lock: ");
-    Serial.println(sm.isMotionDetectLocked() ? "ON" : "OFF");
+    Serial.println(device_manager->isMotionDetectLocked() ? "LOCKED" : "UNLOCKED");
     return;
   }
 
@@ -140,18 +136,21 @@ void ButtonTask::motion_control_specific() {
   if(current_input_event->buttonStates.thumbsDownButton.isPressed != 
      _lastInputEvent.buttonStates.thumbsDownButton.isPressed) {
     if(current_input_event->buttonStates.thumbsDownButton.isPressed) {
-      xEventGroupSetBits(device_mode_event_group, USING_MPU);
-      Serial.println("Motion Detect: ON");
+      if(!device_manager->isMotionDetectLocked()) {
+        device_manager->enableFeature(USING_MPU);
+        Serial.println("Motion Detect: ON");
+      }
     } else {
-      xEventGroupClearBits(device_mode_event_group, USING_MPU);
-      current_input_event->motionState = MotionState(); // Clear motion event
-      Serial.println("Motion Detect: OFF");
+      if(!device_manager->isMotionDetectLocked()) {
+        device_manager->disableFeature(USING_MPU);
+        current_input_event->motionState = MotionState(); // Clear motion event
+        Serial.println("Motion Detect: OFF");
+      }
     }
   }
 }
 
-// TODO: To be implemented
-void ButtonTask::handle_command_mode(DeviceSettings& settings, SettingsManager& sm, bool& in_settings, bool& in_tuning, uint8_t& tuning_target) {
+void ButtonTask::handle_command_mode() {
   // Pointer Button: Single Click to switch Function Mode
   if(current_input_event->buttonStates.pointerButton.event == ButtonEvent::SingleClick &&
      _lastInputEvent.buttonStates.pointerButton.event != ButtonEvent::SingleClick) {
@@ -164,31 +163,33 @@ void ButtonTask::handle_command_mode(DeviceSettings& settings, SettingsManager& 
     }
   }
 
-  // Pointer Button: Double Click to toggle haptics
+  // Pointer Button: Double Click to trigger haptics test
   if(current_input_event->buttonStates.pointerButton.event == ButtonEvent::DoubleClick &&
      _lastInputEvent.buttonStates.pointerButton.event != ButtonEvent::DoubleClick) {
-    sm.toggleHaptics();
-    Serial.print("Haptics: ");
-    Serial.println(sm.isHapticsEnabled() ? "ON" : "OFF");
+    // Dummy event to trigger haptics
+    current_input_event->buttonStates.pointerButton.event = ButtonEvent::DummyEvent;
+    send_queue(haptics_queue, USING_HAPTICS);
+    Serial.println("Haptics Test Triggered");
   }
 
-  // Pointer Button: Triple Click to toggle LED
+  // Pointer Button: Triple Click to trigger LED test
   if(current_input_event->buttonStates.pointerButton.event == ButtonEvent::TripleClick &&
      _lastInputEvent.buttonStates.pointerButton.event != ButtonEvent::TripleClick) {
-    sm.toggleLed();
-    Serial.print("LED: ");
-    Serial.println(sm.isLedEnabled() ? "ON" : "OFF");
+    // Dummy event to trigger LED test
+    current_input_event->buttonStates.pointerButton.event = ButtonEvent::DummyEvent;
+    // send_queue(led_queue, USING_LED);
+    Serial.println("LED Test Triggered");
   }
 
   // Thumbs Up Button: Single Click to toggle/activate haptics
   if(current_input_event->buttonStates.thumbsUpButton.event == ButtonEvent::SingleClick &&
      _lastInputEvent.buttonStates.thumbsUpButton.event != ButtonEvent::SingleClick) {
     if(in_tuning) {
-      sm.increaseSetting(tuning_target, 10);
+      device_manager->increaseSetting(tuning_target, 10);
     } else {
-      sm.toggleHaptics();
+      device_manager->toggleHaptics();
       Serial.print("Haptics: ");
-      Serial.println(sm.isHapticsEnabled() ? "ON" : "OFF");
+      Serial.println(device_manager->isHapticsEnabled() ? "ON" : "OFF");
     }
   }
 
@@ -198,9 +199,9 @@ void ButtonTask::handle_command_mode(DeviceSettings& settings, SettingsManager& 
     if(in_tuning) {
       // Continue tuning
     } else {
-      sm.toggleLaser();
+      device_manager->toggleLaser();
       Serial.print("Laser: ");
-      Serial.println(sm.isLaserEnabled() ? "ON" : "OFF");
+      Serial.println(device_manager->isLaserEnabled() ? "ON" : "OFF");
     }
   }
 
@@ -208,8 +209,9 @@ void ButtonTask::handle_command_mode(DeviceSettings& settings, SettingsManager& 
   if(current_input_event->buttonStates.thumbsUpButton.event == ButtonEvent::TripleClick &&
      _lastInputEvent.buttonStates.thumbsUpButton.event != ButtonEvent::TripleClick) {
     if(!in_tuning) {
-      toggle_event_group_bit(USING_HID);
-      Serial.println("BLE HID toggled");
+      device_manager->toggleHid();
+      Serial.print("BLE HID: ");
+      Serial.println(device_manager->isHidEnabled() ? "ON" : "OFF");
     }
   }
 
@@ -221,7 +223,7 @@ void ButtonTask::handle_command_mode(DeviceSettings& settings, SettingsManager& 
       in_tuning = true;
       Serial.println("Tuning Haptics Intensity - Use Thumb Up (+) / Down (-) to adjust");
     } else {
-      sm.decreaseSetting(tuning_target, 10);
+      device_manager->decreaseSetting(tuning_target, 10);
     }
   }
 
@@ -246,26 +248,22 @@ void ButtonTask::handle_command_mode(DeviceSettings& settings, SettingsManager& 
   }
 
   // Exit tuning mode on pointer button press
-  if(current_input_event->buttonStates.pointerButton.isPressed && in_tuning) {
-    in_tuning = false;
-    sm.printCurrentSettings();
-    Serial.println("Exited tuning mode");
+  if(in_tuning) {
+    if(current_input_event->buttonStates.pointerButton.event == ButtonEvent::Hold ||
+       current_input_event->buttonStates.thumbsUpButton.event == ButtonEvent::Hold ||
+       current_input_event->buttonStates.thumbsDownButton.event == ButtonEvent::Hold) {
+      in_tuning = false;
+      device_manager->printCurrentSettings();
+      Serial.println("Exited tuning mode");
+    }
   }
 
   // Haptics feedback on events
   if((current_input_event->buttonStates.pointerButton.event != _lastInputEvent.buttonStates.pointerButton.event ||
       current_input_event->buttonStates.thumbsUpButton.event != _lastInputEvent.buttonStates.thumbsUpButton.event ||
       current_input_event->buttonStates.thumbsDownButton.event != _lastInputEvent.buttonStates.thumbsDownButton.event) &&
-     xEventGroupGetBits(device_mode_event_group) & USING_HAPTICS) {
+     device_manager->isHapticsEnabled()) {
     xQueueSend(haptics_queue, current_input_event, portMAX_DELAY);
-  }
-}
-
-void ButtonTask::toggle_event_group_bit(EventBits_t bit) {
-  if(xEventGroupGetBits(device_mode_event_group) & bit) {
-    xEventGroupClearBits(device_mode_event_group, bit);
-  } else {
-    xEventGroupSetBits(device_mode_event_group, bit);
   }
 }
 
@@ -276,9 +274,7 @@ void ButtonTask::send_queue(QueueHandle_t queue, EventBits_t bit) {
      current_input_event->buttonStates.thumbsUpButton.event     != _lastInputEvent.buttonStates.thumbsUpButton.event ||
      current_input_event->buttonStates.thumbsDownButton.isPressed != _lastInputEvent.buttonStates.thumbsDownButton.isPressed ||
      current_input_event->buttonStates.thumbsDownButton.event   != _lastInputEvent.buttonStates.thumbsDownButton.event) {
-    // TODO: Check for why sent multiple times
-    // Serial.println("Sending button event to output tasks...");
-    if(xEventGroupGetBits(device_mode_event_group) & bit) {
+    if(device_manager->isFeatureEnabled(bit)) {
       xQueueSend(queue, current_input_event, portMAX_DELAY);
     }
   }

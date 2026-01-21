@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <Arduino.h>
+#include <Preferences.h>
 
 #define USING_HAPTICS        (1 << 0)
 #define USING_LASER          (1 << 1)
@@ -43,6 +44,7 @@ enum class ButtonEvent {
   DoubleLongPress,
   TripleLongPress,
   Hold,
+  DummyEvent, // For triggering actions without actual button press
   OtherPattern
 };
 
@@ -126,38 +128,12 @@ enum class FunctionMode {
   Keyboard
 };
 
-enum class ButtonID {
-  Pointer,
-  ThumbsUp,
-  ThumbsDown
-};
-
 struct SystemMode {
   FunctionMode functionMode;
   InputMode inputMode;
 
   SystemMode() : functionMode(FunctionMode::Presentation), inputMode(InputMode::SimpleInput) {}
   SystemMode(FunctionMode fm, InputMode im) : functionMode(fm), inputMode(im) {}
-};
-
-// Settings and status tracking structure
-struct DeviceSettings {
-  uint8_t hapticsIntensity;
-  uint8_t laserIntensity;
-  uint8_t ledIntensity;
-  bool hapticsEnabled;
-  bool laserEnabled;
-  bool ledEnabled;
-  bool motionDetectLocked;
-  
-  DeviceSettings() 
-    : hapticsIntensity(100), 
-      laserIntensity(100), 
-      ledIntensity(100),
-      hapticsEnabled(true), 
-      laserEnabled(true), 
-      ledEnabled(true),
-      motionDetectLocked(false) {}
 };
 
 #endif // UTILS_H

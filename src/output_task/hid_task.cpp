@@ -5,17 +5,17 @@ static HIDTask* hid_task_instance = nullptr;
 HIDTask::HIDTask()
   : hid_task_handle(NULL),
     hid_queue(nullptr),
-    device_mode_event_group(nullptr),
+    device_manager(nullptr),
     current_system_mode(nullptr) {
 }
 
 void HIDTask::start(
   QueueHandle_t q, 
-  EventGroupHandle_t eg, 
+  DeviceManager* device_manager,
   SystemMode* mode
 ) {
   hid_queue = q;
-  device_mode_event_group = eg;
+  this->device_manager = device_manager;
   current_system_mode = mode;
 
   hid_task_instance = this;
